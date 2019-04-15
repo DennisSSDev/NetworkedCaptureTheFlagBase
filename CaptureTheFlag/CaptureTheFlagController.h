@@ -18,11 +18,13 @@ class CAPTURETHEFLAG_API ACaptureTheFlagController : public APlayerController
 	void OnFire();
 	void MoveForward(float Value);
 	void MoveRight(float Value);
+	void Interact();
+	void StopInteract();
 
 protected:
 	virtual void SetupInputComponent() override;
 private:
 	bool bHoldingJump = false;
 public:
-	virtual void GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 };

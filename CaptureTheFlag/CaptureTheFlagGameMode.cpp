@@ -5,6 +5,7 @@
 #include "CaptureTheFlagCharacter.h"
 #include "CaptureTheFlagGameState.h"
 #include "CaptureTheFlagController.h"
+#include "CaptureTheFlagPlayerState.h"
 #include "UObject/ConstructorHelpers.h"
 
 ACaptureTheFlagGameMode::ACaptureTheFlagGameMode()
@@ -18,4 +19,5 @@ ACaptureTheFlagGameMode::ACaptureTheFlagGameMode()
 	HUDClass = ACaptureTheFlagHUD::StaticClass();
 	GameStateClass = ACaptureTheFlagGameState::StaticClass();
 	PlayerControllerClass = ACaptureTheFlagController::StaticClass();
+	PlayerStateClass = ACaptureTheFlagPlayerState::StaticClass();
 }

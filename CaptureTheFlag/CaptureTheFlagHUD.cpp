@@ -5,6 +5,7 @@
 #include "Engine/Texture2D.h"
 #include "TextureResource.h"
 #include "CanvasItem.h"
+#include "Blueprint/UserWidget.h"
 #include "UObject/ConstructorHelpers.h"
 
 ACaptureTheFlagHUD::ACaptureTheFlagHUD()
@@ -12,8 +13,23 @@ ACaptureTheFlagHUD::ACaptureTheFlagHUD()
 	// Set the crosshair texture
 	static ConstructorHelpers::FObjectFinder<UTexture2D> CrosshairTexObj(TEXT("/Game/FirstPerson/Textures/FirstPersonCrosshair"));
 	CrosshairTex = CrosshairTexObj.Object;
+	static ConstructorHelpers::FClassFinder<UUserWidget> CaptureTheFlagObj(TEXT("/Game/FirstPerson/UI/CaptureTheFlag"));
+	HUDWidgetClass = CaptureTheFlagObj.Class;
 }
 
+void ACaptureTheFlagHUD::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (HUDWidgetClass != nullptr)
+	{
+		CurrentWidget = CreateWidget<UUserWidget>(GetWorld(), HUDWidgetClass);
+		if (CurrentWidget)
+		{
+			CurrentWidget->AddToViewport();
+		}
+	}
+}
 
 void ACaptureTheFlagHUD::DrawHUD()
 {

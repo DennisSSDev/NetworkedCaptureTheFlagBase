@@ -61,6 +61,24 @@ void ACaptureTheFlagController::MoveRight(float Value)
 	}
 }
 
+void ACaptureTheFlagController::Interact()
+{
+	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->Interact();
+	}
+}
+
+void ACaptureTheFlagController::StopInteract()
+{
+	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
+	if (PlayerCharacter)
+	{
+		PlayerCharacter->StopInteract();
+	}
+}
+
 void ACaptureTheFlagController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -74,6 +92,10 @@ void ACaptureTheFlagController::SetupInputComponent()
 
 	// Bind fire event
 	InputComponent->BindAction("Fire", IE_Pressed, this, &ACaptureTheFlagController::OnFire);
+
+	// Bind Interact event
+	InputComponent->BindAction("Interact", IE_Pressed, this, &ACaptureTheFlagController::Interact);
+	InputComponent->BindAction("Interact", IE_Released, this, &ACaptureTheFlagController::StopInteract);
 
 	// Bind movement events
 	InputComponent->BindAxis("MoveForward", this, &ACaptureTheFlagController::MoveForward);

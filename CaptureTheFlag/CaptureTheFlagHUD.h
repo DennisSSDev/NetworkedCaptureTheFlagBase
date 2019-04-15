@@ -17,9 +17,15 @@ public:
 	/** Primary draw call for the HUD */
 	virtual void DrawHUD() override;
 
+	virtual void BeginPlay() override;
+
 private:
 	/** Crosshair asset pointer */
 	class UTexture2D* CrosshairTex;
+	UPROPERTY(EditAnywhere, Category = "Capture The Flag")
+	TSubclassOf<class UUserWidget> HUDWidgetClass;
 
+	UPROPERTY(EditAnywhere, Category = "Capture The Flag")
+	class UUserWidget* CurrentWidget;
 };
 

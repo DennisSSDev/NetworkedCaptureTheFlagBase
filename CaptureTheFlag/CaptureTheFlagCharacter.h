@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "CaptureTheFlagController.h"
+#include "TimerManager.h"
 #include "CaptureTheFlagCharacter.generated.h"
 
 class UInputComponent;
@@ -29,8 +30,15 @@ class ACaptureTheFlagCharacter : public ACharacter
 	/** First person camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FirstPersonCameraComponent;
+
 	UPROPERTY()
 	class UCharacterMovementComponent* CharacterMovementComponent;
+	
+	UPROPERTY()
+	class AFlag* NearbyFlag;
+	UPROPERTY()
+	class AFlag* StoredFlag;
+
 public:
 	ACaptureTheFlagCharacter();
 	/** Fires a projectile. */
@@ -47,6 +55,9 @@ public:
 
 	/** Reverse the jump state */
 	void StopJump();
+	/** Used mainly for flag interaction or vehicle hop on */
+	void Interact();
+	void StopInteract();
 
 protected:
 	virtual void BeginPlay();
@@ -55,11 +66,22 @@ private:
 	void Server_JumpMontage(const bool bStop);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_JumpMontage(const bool bStop);
-
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_DealDamage(const APawn* Target);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_RequestHit(const APawn* Target);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Server_PickUpFlag(AFlag* Target);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_RequestPickUpFlag(AFlag* Target);
+
+	UFUNCTION()
+	void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	UFUNCTION()
+	void OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+	void AttemptPickUp();
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -73,10 +95,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	FVector GunOffset;
 
-	/** Projectile class to spawn */
-	UPROPERTY(EditDefaultsOnly, Category=Projectile)
-	TSubclassOf<class ACaptureTheFlagProjectile> ProjectileClass;
-
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	class USoundBase* FireSound;
@@ -88,10 +106,13 @@ public:
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	class UAnimMontage* JumpAnimation;
+private:
+	UPROPERTY()
+	FTimerHandle PickUpTimer;
 public:
-	/** Returns Mesh1P subobject **/
+	/** Getters */
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
-	/** Returns FirstPersonCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+	FORCEINLINE class AFlag* GetStoredFlag() const { return StoredFlag; }
 };
 

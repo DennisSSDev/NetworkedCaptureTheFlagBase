@@ -24,6 +24,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay Defaults")
 	int32 WinFlagCount = 2;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay Defaults")
+	float SecondsTillFlagScore = 10.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay Defaults")
 	EGameType GameModeType = EGameType::FFA;
 };
 
