@@ -94,7 +94,7 @@ void ACaptureTheFlagCharacter::Server_PickUpFlag_Implementation(AFlag* Target)
 	{
 		if (ACaptureTheFlagPlayerState* CurrentPlayerState = GetPlayerState<ACaptureTheFlagPlayerState>())
 		{
-			GameState->OnFlagCapture.Broadcast(CurrentPlayerState->GetPlayerId(), StoredFlag);
+			GameState->OnFlagCapture.Broadcast(CurrentPlayerState->GetPlayerId(), Target);
 		}
 	}
 }

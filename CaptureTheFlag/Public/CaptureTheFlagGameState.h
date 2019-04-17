@@ -15,6 +15,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFlagDrop);
  */
 
 class AFlag;
+class AFlagSpawnPoint;
 
 USTRUCT(BlueprintType)
 struct FPlayerData
@@ -33,34 +34,42 @@ class CAPTURETHEFLAG_API ACaptureTheFlagGameState : public AGameStateBase
 	GENERATED_BODY()
 
 	UFUNCTION()
-	void BeginCaptureTimer(FString PlayerName, AFlag* Flag);
-	UFUNCTION()
 	void AddPlayerPoints();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_ScoreFlag();
-	UFUNCTION(Server, Reliable, WithValidation)
-	void RPC_ScoreFlag();
 public:
 	ACaptureTheFlagGameState();
 	UFUNCTION(BlueprintPure, Category="Capture the Flag Data")
 	const FPlayerData& GetOwningPlayer() const;
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FPlayerData& GetWonPlayer() const;
 	UFUNCTION(BlueprintPure, Category="Capture the Flag Data")
 	const float& GetProgressBar() const;
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const float& GetTimeTillRestart() const;
+	UFUNCTION()
+	void BeginCaptureTimer(FString PlayerName, AFlag* Flag);
 	UPROPERTY(BlueprintAssignable)
 	FFlagCapture OnFlagCapture;
 	FFlagScore OnFlagScore;
 	FFlagDrop OnFlagDrop;
 	AFlag* StoredFlag;
+protected:
+	virtual void BeginPlay();
 private:
 	UPROPERTY()
 	FTimerHandle FlagCaptureTimer;
 	UPROPERTY()
 	FPlayerData CurrentOwningPlayer;
 	UPROPERTY()
+	FPlayerData WonPlayer;
+	UPROPERTY()
 	TMap<FString, int32> PlayerScores;
 	UPROPERTY()
 	float ProgressBar = 0.f;
 	UPROPERTY()
 	float SecondsTillFlagScore = 1.f;
+	UPROPERTY()
+    TArray<AFlagSpawnPoint*> FlagSpawnPoints;
 };
