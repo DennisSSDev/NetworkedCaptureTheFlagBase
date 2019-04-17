@@ -8,7 +8,7 @@
 #include "CaptureTheFlagPlayerState.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Engine/World.h"
-#include "Flag.h"
+#include "GameFramework/GameSession.h"
 #include "GameFramework/GameMode.h"
 
 ACaptureTheFlagGameMode::ACaptureTheFlagGameMode()
@@ -25,7 +25,7 @@ ACaptureTheFlagGameMode::ACaptureTheFlagGameMode()
 	PlayerStateClass = ACaptureTheFlagPlayerState::StaticClass();
 
 	OnGameWin.AddDynamic(this, &ACaptureTheFlagGameMode::BeginGameRestart);
-	//OnFlagSpawn.AddDynamic(this, &ACaptureTheFlagGameMode::SpawnFlag);
+	OnFlagSpawn.AddDynamic(this, &ACaptureTheFlagGameMode::SpawnFlag);
 }
 
 void ACaptureTheFlagGameMode::BeginGameRestart()
@@ -34,6 +34,7 @@ void ACaptureTheFlagGameMode::BeginGameRestart()
 	{
 		TimeTillGameRestart = 5.f;
 		GetWorld()->GetTimerManager().SetTimer(GameResetTimer, this, &ACaptureTheFlagGameMode::TickGameRestart, 1.f, true);
+		SendFrontEndTimer();
 	}
 }
 
@@ -42,29 +43,38 @@ void ACaptureTheFlagGameMode::TickGameRestart()
 	if (--TimeTillGameRestart < 0.f)
 	{
 		// Restart the game and stop the timer tick
-		RestartGame();
 		GetWorld()->GetTimerManager().ClearTimer(GameResetTimer);
+		//GameSession->Restart();
+		RestartGame();
+		//GetWorld()->GetTimerManager().ClearTimer(GameResetTimer);
 	}
-
 }
 
 void ACaptureTheFlagGameMode::RestartGame()
 {
-	Cast<AGameMode>(this)->RestartGame();
+	//GameSession->Restart();
+	//GetWorld()->ServerTravel()
+	GetWorld()->SeamlessTravel("FirstPersonExampleMap");
+	//GetWorld()->ServerTravel("?Restart", false);
+	//Cast<AGameMode>(this)->RestartGame();
 }
 
-void ACaptureTheFlagGameMode::SpawnFlag(FVector Location, FRotator Rotation) const
+void ACaptureTheFlagGameMode::SendFrontEndTimer()
 {
-	//GetWorld()->SpawnActor<AFlag>(AFlag::StaticClass(), Location, Rotation);
-	FActorSpawnParameters SpawnInfo;
-	SpawnInfo.Instigator = Instigator;
-	const AFlag* Flag = GetWorld()->SpawnActor<AFlag>
-	(
-		AFlag::StaticClass(),
-		Location,
-		Rotation,
-		SpawnInfo
-	);
+	GetGameState<ACaptureTheFlagGameState>()->StartEndGameTimerFrontEnd();
+}
+
+void ACaptureTheFlagGameMode::SpawnFlag(FVector Location)
+{
+	if (FlagBP)
+	{
+		GetWorld()->SpawnActor<AFlag>
+		(
+			FlagBP,
+			Location,
+			FRotator::ZeroRotator
+		);
+	}
 }
 
 const float& ACaptureTheFlagGameMode::GetTimeTillGameRestart() const

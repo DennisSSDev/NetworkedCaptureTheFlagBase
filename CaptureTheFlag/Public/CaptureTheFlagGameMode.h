@@ -5,10 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "TimerManager.h"
+#include "Flag.h"
 #include "CaptureTheFlagGameMode.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameWin);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSpawn, FVector, SpawnPosition, FRotator, SpawnRotation);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSpawn, FVector, SpawnPosition);
 
 UENUM(BlueprintType)
 enum class EGameType : uint8
@@ -29,6 +30,8 @@ class ACaptureTheFlagGameMode : public AGameModeBase
 	void TickGameRestart();
 	UFUNCTION()
 	void RestartGame();
+	UFUNCTION()
+	void SendFrontEndTimer();
 public:
 	ACaptureTheFlagGameMode();
 
@@ -38,6 +41,8 @@ public:
 	float SecondsTillFlagScore = 10.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay Defaults")
 	EGameType GameModeType = EGameType::FFA;
+	UPROPERTY(EditDefaultsOnly, Category = "Flag")
+	TSubclassOf<AFlag> FlagBP;
 
 	FGameWin OnGameWin;
 	FSpawn OnFlagSpawn;
@@ -48,7 +53,7 @@ public:
 	UFUNCTION()
 	const float& GetTimeTillGameRestart() const;
 	UFUNCTION()
-	void SpawnFlag(FVector Location, FRotator Rotation) const;
+	void SpawnFlag(FVector Location);
 };
 
 

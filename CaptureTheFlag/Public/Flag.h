@@ -27,7 +27,7 @@ public:
 	AFlag();
 	// determine how can the player pick up the flag
 	UPROPERTY(EditAnywhere)
-	int32 BehaviorState = 0;
+	int32 BehaviorState = -1;
 	UPROPERTY(EditAnywhere)
 	EFlagState FlagState = EFlagState::InBase;
 

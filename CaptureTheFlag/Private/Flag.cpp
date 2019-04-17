@@ -32,6 +32,5 @@ void AFlag::BeginPlay()
 void AFlag::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 

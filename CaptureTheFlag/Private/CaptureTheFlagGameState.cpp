@@ -20,30 +20,25 @@ void ACaptureTheFlagGameState::Server_ScoreFlag_Implementation()
 	{
 		StoredFlag->Destroy();
 	}
-	if (const ACaptureTheFlagGameMode* GameMode = GetDefaultGameMode<ACaptureTheFlagGameMode>())
+
+	if (ACaptureTheFlagGameMode* GM = (ACaptureTheFlagGameMode*)GetWorld()->GetAuthGameMode())
 	{
-		if (PlayerScores[CurrentOwningPlayer.Name] == GameMode->WinFlagCount)
+		if (PlayerScores[CurrentOwningPlayer.Name] == GM->WinFlagCount)
 		{
 			WonPlayer = CurrentOwningPlayer;
-			GameMode->OnGameWin.Broadcast();
+			if (HasAuthority())
+			{
+				GM->OnGameWin.Broadcast();
+			}
 		}
 		else
 		{
 			// Spawn a new flag at a random point
 			if (HasAuthority())
 			{
-				uint32 SpawnPointIndex = FMath::RandRange(0, FlagSpawnPoints.Num() - 1);
-				const AFlag* Flag = GetWorld()->SpawnActor<AFlag>
-					(
-						AFlag::StaticClass(),
-						FlagSpawnPoints[SpawnPointIndex]->GetActorLocation(),
-						FRotator::ZeroRotator
-						);
-				if (Flag)
-				{
-					GameMode->SpawnFlag(FlagSpawnPoints[SpawnPointIndex]->GetActorLocation(), FRotator::ZeroRotator);
-				}
-				//GameMode->OnFlagSpawn.Broadcast(FlagSpawnPoints[SpawnPointIndex]->GetActorLocation(), FRotator::ZeroRotator);
+				uint16 SpawnPointIndex = FMath::RandRange(0, FlagSpawnPoints.Num() - 1);
+				ACaptureTheFlagGameMode* GM = (ACaptureTheFlagGameMode*)GetWorld()->GetAuthGameMode();
+				GM->OnFlagSpawn.Broadcast(FlagSpawnPoints[SpawnPointIndex]->GetActorLocation());
 			}
 		}
 	}
@@ -65,6 +60,20 @@ void ACaptureTheFlagGameState::BeginCaptureTimer(FString PlayerName, AFlag* Flag
 	}
 	CurrentOwningPlayer.Score = PlayerScores[PlayerName];
 	GetWorld()->GetTimerManager().SetTimer(FlagCaptureTimer, this, &ACaptureTheFlagGameState::AddPlayerPoints, 0.1f, true);
+}
+
+void ACaptureTheFlagGameState::StartEndGameTimerFrontEnd_Implementation()
+{
+	ProgressMisc = 5.f;
+	GetWorld()->GetTimerManager().SetTimer(MiscTimer, this, &ACaptureTheFlagGameState::MiscTimerTick, 1.f, true);
+}
+
+void ACaptureTheFlagGameState::MiscTimerTick()
+{
+	if (--ProgressMisc < 0.f)
+	{
+		GetWorld()->GetTimerManager().ClearTimer(MiscTimer);
+	}
 }
 
 void ACaptureTheFlagGameState::BeginPlay()
@@ -102,5 +111,5 @@ const float& ACaptureTheFlagGameState::GetProgressBar() const
 
 const float& ACaptureTheFlagGameState::GetTimeTillRestart() const
 {
-	return GetDefaultGameMode<ACaptureTheFlagGameMode>()->GetTimeTillGameRestart();
+	return ProgressMisc;
 }

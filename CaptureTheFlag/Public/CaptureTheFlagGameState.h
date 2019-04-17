@@ -35,7 +35,8 @@ class CAPTURETHEFLAG_API ACaptureTheFlagGameState : public AGameStateBase
 
 	UFUNCTION()
 	void AddPlayerPoints();
-
+	UFUNCTION()
+	void MiscTimerTick();
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_ScoreFlag();
 public:
@@ -50,16 +51,25 @@ public:
 	const float& GetTimeTillRestart() const;
 	UFUNCTION()
 	void BeginCaptureTimer(FString PlayerName, AFlag* Flag);
+	UFUNCTION(NetMulticast, Reliable)
+	void StartEndGameTimerFrontEnd();
+
 	UPROPERTY(BlueprintAssignable)
 	FFlagCapture OnFlagCapture;
+	UPROPERTY(BlueprintAssignable)
 	FFlagScore OnFlagScore;
+	UPROPERTY(BlueprintAssignable)
 	FFlagDrop OnFlagDrop;
+	UPROPERTY()
 	AFlag* StoredFlag;
+
 protected:
 	virtual void BeginPlay();
 private:
 	UPROPERTY()
 	FTimerHandle FlagCaptureTimer;
+	UPROPERTY()
+	FTimerHandle MiscTimer; // Use for misc timer stuff
 	UPROPERTY()
 	FPlayerData CurrentOwningPlayer;
 	UPROPERTY()
@@ -68,6 +78,8 @@ private:
 	TMap<FString, int32> PlayerScores;
 	UPROPERTY()
 	float ProgressBar = 0.f;
+	UPROPERTY()
+	float ProgressMisc = -1.f;
 	UPROPERTY()
 	float SecondsTillFlagScore = 1.f;
 	UPROPERTY()
