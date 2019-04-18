@@ -8,8 +8,7 @@
 #include "CaptureTheFlagGameState.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFlagCapture, FString, PlayerName, AFlag*, Flag);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFlagScore);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFlagDrop);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFlagDelegate);
 /**
  * 
  */
@@ -51,15 +50,15 @@ public:
 	const float& GetTimeTillRestart() const;
 	UFUNCTION()
 	void BeginCaptureTimer(FString PlayerName, AFlag* Flag);
+	UFUNCTION()
+	void StopCaptureTimer();
 	UFUNCTION(NetMulticast, Reliable)
 	void StartEndGameTimerFrontEnd();
 
 	UPROPERTY(BlueprintAssignable)
 	FFlagCapture OnFlagCapture;
 	UPROPERTY(BlueprintAssignable)
-	FFlagScore OnFlagScore;
-	UPROPERTY(BlueprintAssignable)
-	FFlagDrop OnFlagDrop;
+	FFlagDelegate OnFlagDrop;
 	UPROPERTY()
 	AFlag* StoredFlag;
 

@@ -20,7 +20,8 @@ class CAPTURETHEFLAG_API ACaptureTheFlagController : public APlayerController
 	void MoveRight(float Value);
 	void Interact();
 	void StopInteract();
-
+	void DropFlag();
+	void StopDropFlag();
 protected:
 	virtual void SetupInputComponent() override;
 private:

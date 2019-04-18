@@ -10,6 +10,8 @@
 
 class UInputComponent;
 class UCharacterMovementComponent;
+class UHealthComponent;
+
 UCLASS(config=Game)
 class ACaptureTheFlagCharacter : public ACharacter
 {
@@ -33,6 +35,8 @@ class ACaptureTheFlagCharacter : public ACharacter
 
 	UPROPERTY()
 	class UCharacterMovementComponent* CharacterMovementComponent;
+	UPROPERTY(VisibleAnywhere)
+	class UHealthComponent* HealthComponent;
 	
 	UPROPERTY()
 	class AFlag* NearbyFlag;
@@ -59,6 +63,8 @@ public:
 	void Interact();
 	void StopInteract();
 
+	void DropFlag();
+	void StopDropFlag();
 protected:
 	virtual void BeginPlay();
 private:
@@ -66,8 +72,8 @@ private:
 	void Server_JumpMontage(const bool bStop);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_JumpMontage(const bool bStop);
-	UFUNCTION(NetMulticast, Reliable)
-	void Server_DealDamage(const APawn* Target);
+	//UFUNCTION(NetMulticast, Reliable)
+	//void Server_DealDamage(const APawn* Target);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_RequestHit(const APawn* Target);
 
@@ -76,12 +82,22 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_RequestPickUpFlag(AFlag* Target);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Server_DropFlag();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_RequestDropFlag();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void Server_StopFlagCapture();
+
 	UFUNCTION()
 	void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
 	void OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	UFUNCTION()
 	void AttemptPickUp();
+	UFUNCTION()
+	void AttemptDropFlag();
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -109,6 +125,8 @@ public:
 private:
 	UPROPERTY()
 	FTimerHandle PickUpTimer;
+	UPROPERTY()
+	FTimerHandle DropTimer;
 public:
 	/** Getters */
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }

@@ -12,6 +12,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Flag.h"
+#include "HealthComponent.h"
 #include "CaptureTheFlagGameState.h"
 #include "CaptureTheFlagPlayerState.h"
 
@@ -55,6 +56,8 @@ ACaptureTheFlagCharacter::ACaptureTheFlagCharacter()
 	FP_MuzzleLocation->SetupAttachment(FP_Gun);
 	FP_MuzzleLocation->SetRelativeLocation(FVector(0.2f, 48.4f, -10.6f));
 
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("Health"));
+	AddOwnedComponent(HealthComponent);
 	// Default offset from the character location for projectiles to spawn
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
 
@@ -109,6 +112,52 @@ bool ACaptureTheFlagCharacter::RPC_RequestPickUpFlag_Validate(AFlag* Target)
 	return true;
 }
 
+void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
+{
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	if (AttachedActors.Num() > 0)
+	{
+		AFlag* AttachedFlag = Cast<AFlag>(AttachedActors[0]);
+		if (AttachedFlag)
+		{
+			FDetachmentTransformRules Rules(EDetachmentRule::KeepWorld, EDetachmentRule::KeepRelative, EDetachmentRule::KeepRelative, true);
+			AttachedFlag->DetachFromActor(Rules);
+			AttachedFlag->SetActorRotation(FRotator::ZeroRotator);
+			AttachedFlag->SetActorScale3D(FVector(0.2f, 0.2f, 2.5f));
+			AttachedFlag->FlagState = EFlagState::Dropped;
+			AttachedFlag->BehaviorState = 0;
+			UBoxComponent* BoxCollision = AttachedFlag->FindComponentByClass<UBoxComponent>();
+			BoxCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? GetWorld()->GetGameState<ACaptureTheFlagGameState>() : nullptr)
+			{
+				if (ACaptureTheFlagPlayerState* CurrentPlayerState = GetPlayerState<ACaptureTheFlagPlayerState>())
+				{
+					GameState->OnFlagDrop.Broadcast();
+				}
+			}
+		}
+	}
+}
+
+bool ACaptureTheFlagCharacter::RPC_RequestDropFlag_Validate()
+{
+	return true;
+}
+
+void ACaptureTheFlagCharacter::RPC_RequestDropFlag_Implementation()
+{
+	Server_DropFlag();
+}
+
+void ACaptureTheFlagCharacter::Server_StopFlagCapture_Implementation()
+{
+	if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? GetWorld()->GetGameState<ACaptureTheFlagGameState>() : nullptr)
+	{
+		GameState->OnFlagDrop.Broadcast();
+	}
+}
+
 void ACaptureTheFlagCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (AFlag* ValidFlag = Cast<AFlag>(OtherActor))
@@ -153,15 +202,43 @@ void ACaptureTheFlagCharacter::AttemptPickUp()
 	}
 }
 
+void ACaptureTheFlagCharacter::AttemptDropFlag()
+{
+	if (IsLocallyControlled())
+	{
+		UStaticMeshComponent* StaticMesh = StoredFlag->FindComponentByClass<UStaticMeshComponent>();
+		StaticMesh->SetVisibility(true); // only do this locally
+	}
+	StoredFlag = nullptr;
+	if (HasAuthority())
+	{
+		Server_DropFlag();
+	}
+	else
+	{
+		RPC_RequestDropFlag();
+	}
+}
+/*
 void ACaptureTheFlagCharacter::Server_DealDamage_Implementation(const APawn* Target)
 {
 	// Implement the damaging here
-	UE_LOG(LogFPChar, Warning, TEXT("%s Got Hit"), *this->GetName());
+	UE_LOG(LogFPChar, Warning, TEXT("%s Got Hit"), *Target->GetName());
+	UHealthComponent* HPComponent = Target->FindComponentByClass<UHealthComponent>();
+	if (HPComponent)
+	{
+		HPComponent->RPC_DealDamage();
+	}
 }
-
+*/
 void ACaptureTheFlagCharacter::RPC_RequestHit_Implementation(const APawn* Target)
 {
-	Server_DealDamage(Target);
+	UE_LOG(LogFPChar, Warning, TEXT("%s Got Hit"), *Target->GetName());
+	UHealthComponent* HPComponent = Target->FindComponentByClass<UHealthComponent>();
+	if (HPComponent)
+	{
+		HPComponent->RPC_DealDamage();
+	}
 }
 
 bool ACaptureTheFlagCharacter::RPC_RequestHit_Validate(const APawn* Target)
@@ -207,13 +284,15 @@ void ACaptureTheFlagCharacter::OnFire()
 		const FVector EndLocation = SpawnLocation + (SpawnRotation.Vector() * 500.f);
 		FHitResult HitResult;
 		FCollisionQueryParams QueryParams;
-		QueryParams.AddIgnoredActor(this);
+		QueryParams.AddIgnoredActor(GetOwner());
 		DrawDebugLine(World, SpawnLocation, EndLocation, FColor::Blue, false, 0.2f, 0, 5.f);
 		if (World->LineTraceSingleByChannel(HitResult, SpawnLocation, EndLocation, ECollisionChannel::ECC_Pawn))
 		{
 			ACaptureTheFlagCharacter* HitTarget = Cast<ACaptureTheFlagCharacter>(HitResult.Actor);
 			if (HitTarget)
 			{
+				RPC_RequestHit(HitTarget);
+				/*
 				if (HasAuthority())
 				{
 					Server_DealDamage(HitTarget);
@@ -222,6 +301,7 @@ void ACaptureTheFlagCharacter::OnFire()
 				{
 					RPC_RequestHit(HitTarget);
 				}
+				*/
 			}
 		}
 	}
@@ -320,6 +400,28 @@ void ACaptureTheFlagCharacter::StopInteract()
 		if (UWorld* const World = GetWorld())
 		{
 			World->GetTimerManager().ClearTimer(PickUpTimer);
+		}
+	}
+}
+
+void ACaptureTheFlagCharacter::DropFlag()
+{
+	if(StoredFlag)
+	{
+		if (UWorld* const World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(DropTimer, this, &ACaptureTheFlagCharacter::AttemptDropFlag, 1.f, false);
+		}
+	}
+}
+
+void ACaptureTheFlagCharacter::StopDropFlag()
+{
+	if (DropTimer.IsValid())
+	{
+		if (UWorld* const World = GetWorld())
+		{
+			World->GetTimerManager().ClearTimer(DropTimer);
 		}
 	}
 }

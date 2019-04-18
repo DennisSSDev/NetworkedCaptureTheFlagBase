@@ -81,3 +81,10 @@ const float& ACaptureTheFlagGameMode::GetTimeTillGameRestart() const
 {
 	return TimeTillGameRestart;
 }
+
+void ACaptureTheFlagGameMode::RespawnPlayer(APawn* Pawn)
+{
+	AController* PC = Pawn->GetController();
+	Pawn->Destroy();
+	RestartPlayer(PC);
+}

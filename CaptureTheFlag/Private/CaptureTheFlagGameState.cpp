@@ -10,6 +10,7 @@
 ACaptureTheFlagGameState::ACaptureTheFlagGameState()
 {
 	OnFlagCapture.AddDynamic(this, &ACaptureTheFlagGameState::BeginCaptureTimer);
+	OnFlagDrop.AddDynamic(this, &ACaptureTheFlagGameState::StopCaptureTimer);
 }
 
 void ACaptureTheFlagGameState::Server_ScoreFlag_Implementation()
@@ -37,7 +38,6 @@ void ACaptureTheFlagGameState::Server_ScoreFlag_Implementation()
 			if (HasAuthority())
 			{
 				uint16 SpawnPointIndex = FMath::RandRange(0, FlagSpawnPoints.Num() - 1);
-				ACaptureTheFlagGameMode* GM = (ACaptureTheFlagGameMode*)GetWorld()->GetAuthGameMode();
 				GM->OnFlagSpawn.Broadcast(FlagSpawnPoints[SpawnPointIndex]->GetActorLocation());
 			}
 		}
@@ -60,6 +60,18 @@ void ACaptureTheFlagGameState::BeginCaptureTimer(FString PlayerName, AFlag* Flag
 	}
 	CurrentOwningPlayer.Score = PlayerScores[PlayerName];
 	GetWorld()->GetTimerManager().SetTimer(FlagCaptureTimer, this, &ACaptureTheFlagGameState::AddPlayerPoints, 0.1f, true);
+}
+
+void ACaptureTheFlagGameState::StopCaptureTimer()
+{
+	StoredFlag = nullptr;
+	if (FlagCaptureTimer.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(FlagCaptureTimer);
+		ProgressBar = 0.f;
+		CurrentOwningPlayer.Name = "None";
+		CurrentOwningPlayer.Score = -1;
+	}
 }
 
 void ACaptureTheFlagGameState::StartEndGameTimerFrontEnd_Implementation()

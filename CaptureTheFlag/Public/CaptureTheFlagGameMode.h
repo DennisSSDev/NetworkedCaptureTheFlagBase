@@ -8,6 +8,8 @@
 #include "Flag.h"
 #include "CaptureTheFlagGameMode.generated.h"
 
+class ACaptureTheFlagController;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGameWin);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSpawn, FVector, SpawnPosition);
 
@@ -54,6 +56,8 @@ public:
 	const float& GetTimeTillGameRestart() const;
 	UFUNCTION()
 	void SpawnFlag(FVector Location);
+	UFUNCTION()
+	void RespawnPlayer(APawn* Pawn);
 };
 
 
