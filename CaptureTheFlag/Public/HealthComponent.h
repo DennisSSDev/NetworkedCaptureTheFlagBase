@@ -6,8 +6,6 @@
 #include "Components/ActorComponent.h"
 #include "HealthComponent.generated.h"
 
-class ACaptureTheFlagCharacter;
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHealthState);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -41,5 +39,5 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_KillSelf();
 private:
-	ACaptureTheFlagCharacter* Owner;
+	AActor* Owner;
 };

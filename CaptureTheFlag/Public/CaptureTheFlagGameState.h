@@ -54,6 +54,8 @@ public:
 	void StopCaptureTimer();
 	UFUNCTION(NetMulticast, Reliable)
 	void StartEndGameTimerFrontEnd();
+	UFUNCTION(NetMulticast, Reliable)
+	void ReturnFlagToBase(AFlag* Target, uint8 Index);
 
 	UPROPERTY(BlueprintAssignable)
 	FFlagCapture OnFlagCapture;

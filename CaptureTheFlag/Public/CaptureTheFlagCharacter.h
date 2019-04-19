@@ -64,6 +64,7 @@ public:
 	void StopInteract();
 
 	void DropFlag();
+	void InstantDropFlag();
 	void StopDropFlag();
 protected:
 	virtual void BeginPlay();
@@ -89,6 +90,9 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_StopFlagCapture();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_ReturnFlagToBase(AFlag* Target);
 
 	UFUNCTION()
 	void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);

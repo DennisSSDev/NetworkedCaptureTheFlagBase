@@ -74,6 +74,12 @@ void ACaptureTheFlagGameState::StopCaptureTimer()
 	}
 }
 
+void ACaptureTheFlagGameState::ReturnFlagToBase_Implementation(AFlag* Target, uint8 Index)
+{
+	Target->FlagState = EFlagState::InBase;
+	Target->SetActorLocation(FlagSpawnPoints[Index]->GetActorLocation());
+}
+
 void ACaptureTheFlagGameState::StartEndGameTimerFrontEnd_Implementation()
 {
 	ProgressMisc = 5.f;

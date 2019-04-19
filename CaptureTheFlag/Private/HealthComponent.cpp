@@ -20,7 +20,7 @@ UHealthComponent::UHealthComponent()
 void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	Owner = Cast<ACaptureTheFlagCharacter>(GetOwner());
+	Owner = Cast<AActor>(GetOwner()); // change to generic actor
 	// ...
 }
 
@@ -48,12 +48,15 @@ void UHealthComponent::RPC_KillSelf_Implementation()
 {
 	if (Owner)
 	{
-		if (ACaptureTheFlagGameMode* GM = Cast<ACaptureTheFlagGameMode>(Owner->GetWorld()->GetAuthGameMode()))
+		if (ACaptureTheFlagCharacter* FCharacter = Cast<ACaptureTheFlagCharacter>(Owner))
 		{
-			GM->RespawnPlayer(Owner);
+			FCharacter->InstantDropFlag();
+			if (ACaptureTheFlagGameMode* GM = Cast<ACaptureTheFlagGameMode>(Owner->GetWorld()->GetAuthGameMode()))
+			{
+				GM->RespawnPlayer(FCharacter);
+			}
 		}
 	}
-	//Server_KillSelf();
 }
 
 bool UHealthComponent::RPC_KillSelf_Validate()
@@ -65,9 +68,13 @@ void UHealthComponent::Server_KillSelf_Implementation()
 {
 	if (Owner)
 	{
-		if (ACaptureTheFlagGameMode* GM = Cast<ACaptureTheFlagGameMode>(Owner->GetWorld()->GetAuthGameMode()))
+		if (ACaptureTheFlagCharacter* FCharacter = Cast<ACaptureTheFlagCharacter>(Owner))
 		{
-			GM->RespawnPlayer(Owner);
+			FCharacter->InstantDropFlag();
+			if (ACaptureTheFlagGameMode* GM = Cast<ACaptureTheFlagGameMode>(Owner->GetWorld()->GetAuthGameMode()))
+			{
+				GM->RespawnPlayer(FCharacter);
+			}
 		}
 	}
 }

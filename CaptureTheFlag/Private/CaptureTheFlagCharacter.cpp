@@ -14,6 +14,7 @@
 #include "Flag.h"
 #include "HealthComponent.h"
 #include "CaptureTheFlagGameState.h"
+#include "CaptureTheFlagGameMode.h"
 #include "CaptureTheFlagPlayerState.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
@@ -126,6 +127,8 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 			AttachedFlag->SetActorRotation(FRotator::ZeroRotator);
 			AttachedFlag->SetActorScale3D(FVector(0.2f, 0.2f, 2.5f));
 			AttachedFlag->FlagState = EFlagState::Dropped;
+			UStaticMeshComponent* StaticMesh = AttachedFlag->FindComponentByClass<UStaticMeshComponent>();
+			StaticMesh->SetVisibility(true);
 			AttachedFlag->BehaviorState = 0;
 			UBoxComponent* BoxCollision = AttachedFlag->FindComponentByClass<UBoxComponent>();
 			BoxCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -158,16 +161,33 @@ void ACaptureTheFlagCharacter::Server_StopFlagCapture_Implementation()
 	}
 }
 
+bool ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Validate(AFlag* Target)
+{
+	return true;
+}
+
+void ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Implementation(AFlag* Target)
+{
+	if(ACaptureTheFlagGameState* GameState = GetWorld()->GetGameState<ACaptureTheFlagGameState>())
+	{
+		uint8 SpawnPointIndex = FMath::RandRange(0, 2); // TODO: this is hard coded for now
+		GameState->ReturnFlagToBase(Target, SpawnPointIndex);
+	}
+}
+
 void ACaptureTheFlagCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (AFlag* ValidFlag = Cast<AFlag>(OtherActor))
 	{
-		if (ValidFlag->FlagState == EFlagState::Dropped || ValidFlag->FlagState == EFlagState::InBase)
+		if (ValidFlag->FlagState == EFlagState::Dropped || ValidFlag->FlagState == EFlagState::InBase) // TODO: FIx this
 		{
 			NearbyFlag = ValidFlag;
-			if (ValidFlag->BehaviorState < 0)
+			if (ValidFlag->FlagState == EFlagState::InBase)
 			{
-				AttemptPickUp();
+				if (ValidFlag->BehaviorState < 0)
+				{
+					AttemptPickUp();
+				}
 			}
 		}
 	}
@@ -204,11 +224,6 @@ void ACaptureTheFlagCharacter::AttemptPickUp()
 
 void ACaptureTheFlagCharacter::AttemptDropFlag()
 {
-	if (IsLocallyControlled())
-	{
-		UStaticMeshComponent* StaticMesh = StoredFlag->FindComponentByClass<UStaticMeshComponent>();
-		StaticMesh->SetVisibility(true); // only do this locally
-	}
 	StoredFlag = nullptr;
 	if (HasAuthority())
 	{
@@ -375,7 +390,7 @@ void ACaptureTheFlagCharacter::Interact()
 {
 	if (NearbyFlag)
 	{
-		if (NearbyFlag->FlagState == EFlagState::Dropped || NearbyFlag->FlagState == EFlagState::InBase)
+		if (NearbyFlag->FlagState == EFlagState::InBase)
 		{
 			int32& BehaviorState = NearbyFlag->BehaviorState;
 			if (BehaviorState == 0)
@@ -389,6 +404,10 @@ void ACaptureTheFlagCharacter::Interact()
 					World->GetTimerManager().SetTimer(PickUpTimer, this, &ACaptureTheFlagCharacter::AttemptPickUp, BehaviorState, false);
 				}
 			}
+		}
+		else if (NearbyFlag->FlagState == EFlagState::Dropped)
+		{
+			RPC_ReturnFlagToBase(NearbyFlag);
 		}
 	}
 }
@@ -413,6 +432,11 @@ void ACaptureTheFlagCharacter::DropFlag()
 			World->GetTimerManager().SetTimer(DropTimer, this, &ACaptureTheFlagCharacter::AttemptDropFlag, 1.f, false);
 		}
 	}
+}
+
+void ACaptureTheFlagCharacter::InstantDropFlag()
+{
+	AttemptDropFlag();
 }
 
 void ACaptureTheFlagCharacter::StopDropFlag()
