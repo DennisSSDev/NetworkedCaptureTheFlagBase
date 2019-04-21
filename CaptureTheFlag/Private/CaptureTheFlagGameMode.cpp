@@ -84,7 +84,16 @@ const float& ACaptureTheFlagGameMode::GetTimeTillGameRestart() const
 
 void ACaptureTheFlagGameMode::RespawnPlayer(APawn* Pawn)
 {
-	AController* PC = Pawn->GetController();
+	AController* const PC = Pawn->GetController();
+	Pawn->Destroy();
+	RestartPlayer(PC);
+}
+
+void ACaptureTheFlagGameMode::RespawnPlayerFromVehicle(APawn* Pawn)
+{
+	ACaptureTheFlagController* const PC = Cast<ACaptureTheFlagController>(Pawn->GetController());
+	APawn* const PlayerPawn = PC->GetDefaultPlayerPawn();
+	PlayerPawn->Destroy();
 	Pawn->Destroy();
 	RestartPlayer(PC);
 }

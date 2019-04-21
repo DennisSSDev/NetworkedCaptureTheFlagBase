@@ -3,6 +3,9 @@
 
 #include "CaptureTheFlagController.h"
 #include "CaptureTheFlagCharacter.h"
+#include "HoverVehicle.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "UnrealNetwork.h"
 
 void ACaptureTheFlagController::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
@@ -45,10 +48,15 @@ void ACaptureTheFlagController::OnFire()
 
 void ACaptureTheFlagController::MoveForward(float Value)
 {
-	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
-	if (PlayerCharacter)
+	if (ACaptureTheFlagCharacter* const PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn()))
 	{
 		PlayerCharacter->MoveForward(Value);
+	}
+	else if(AHoverVehicle* const VehiclePawn = Cast<AHoverVehicle>(GetPawn()))
+	{
+		UCameraComponent* CameraComponent = VehiclePawn->FindComponentByClass<UCameraComponent>();
+
+		VehiclePawn->RPC_MoveForward(Value, CameraComponent->GetComponentRotation().Yaw);
 	}
 }
 
@@ -59,6 +67,12 @@ void ACaptureTheFlagController::MoveRight(float Value)
 	{
 		PlayerCharacter->MoveRight(Value);
 	}
+	else if (AHoverVehicle* const VehiclePawn = Cast<AHoverVehicle>(GetPawn()))
+	{
+		UCameraComponent* CameraComponent = VehiclePawn->FindComponentByClass<UCameraComponent>();
+
+		VehiclePawn->RPC_MoveRight(Value, CameraComponent->GetComponentRotation().Yaw);
+	}
 }
 
 void ACaptureTheFlagController::Interact()
@@ -66,7 +80,23 @@ void ACaptureTheFlagController::Interact()
 	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
 	if (PlayerCharacter)
 	{
-		PlayerCharacter->Interact();
+		if (AHoverVehicle* StoredVehicle = PlayerCharacter->GetStoredVehicle())
+		{
+			bInVehicle = true;
+			RPC_PossessVehicle(StoredVehicle);
+		}
+		else
+		{
+			PlayerCharacter->Interact();
+		}
+	}
+	else
+	{
+		if (bInVehicle)
+		{
+			bInVehicle = false;
+			RPC_UnPossesVehicle();
+		}
 	}
 }
 
@@ -94,6 +124,66 @@ void ACaptureTheFlagController::StopDropFlag()
 	if (PlayerCharacter)
 	{
 		PlayerCharacter->StopDropFlag();
+	}
+}
+
+bool ACaptureTheFlagController::RPC_PossessVehicle_Validate(AHoverVehicle* Vehicle)
+{
+	return true;
+}
+
+void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle* Vehicle)
+{
+	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
+	DefaultPawn = PlayerCharacter;
+	if (Vehicle->FlagAllowance == EFlagAllowance::DENY)
+	{
+		PlayerCharacter->InstantDropFlag();
+	}
+	DefaultPawn->SetActorHiddenInGame(true);
+	//DefaultPawn->SetActorLocation(FVector(0.f, 0.f, 1000.f));
+	//DefaultPawn->FindComponentByClass<UCharacterMovementComponent>()->GravityScale = 0.f;
+	TArray<AActor*> AttachedActors;
+	PlayerCharacter->GetAttachedActors(AttachedActors);
+	if (AttachedActors.Num() > 0)
+	{
+		// only the flag is ever attached
+		AttachedActors[0]->SetActorHiddenInGame(true);
+	}
+	DefaultPawn->SetActorEnableCollision(false);
+	UnPossess();
+	Vehicle->InnerPawn = DefaultPawn;
+	Vehicle->VehicleState = EVehicleState::POSSESED;
+	Possess(Vehicle);
+	// Server_PossesVehicle(Vehicle);
+}
+
+bool ACaptureTheFlagController::RPC_UnPossesVehicle_Validate()
+{
+	return true;
+}
+
+void ACaptureTheFlagController::RPC_UnPossesVehicle_Implementation()
+{
+	if (DefaultPawn)
+	{
+		AHoverVehicle* HoverVehicle = Cast<AHoverVehicle>(GetPawn());
+		FVector CurrentLocation = GetPawn()->GetActorLocation();
+		DefaultPawn->SetActorLocation(CurrentLocation);
+		DefaultPawn->SetActorHiddenInGame(false);
+		DefaultPawn->SetActorEnableCollision(true);
+		TArray<AActor*> AttachedActors;
+		DefaultPawn->GetAttachedActors(AttachedActors);
+		if (AttachedActors.Num() > 0)
+		{
+			// only the flag is ever attached
+			AttachedActors[0]->SetActorHiddenInGame(false);
+		}
+		//DefaultPawn->FindComponentByClass<UCharacterMovementComponent>()->GravityScale = 1.f;
+		HoverVehicle->VehicleState = EVehicleState::REST;
+		HoverVehicle->InnerPawn = nullptr;
+		UnPossess();
+		Possess(DefaultPawn);
 	}
 }
 

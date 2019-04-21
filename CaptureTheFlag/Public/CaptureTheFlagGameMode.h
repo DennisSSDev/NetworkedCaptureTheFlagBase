@@ -58,6 +58,8 @@ public:
 	void SpawnFlag(FVector Location);
 	UFUNCTION()
 	void RespawnPlayer(APawn* Pawn);
+	UFUNCTION()
+	void RespawnPlayerFromVehicle(APawn* Pawn);
 };
 
 

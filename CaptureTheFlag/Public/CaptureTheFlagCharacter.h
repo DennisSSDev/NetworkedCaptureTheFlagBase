@@ -42,6 +42,8 @@ class ACaptureTheFlagCharacter : public ACharacter
 	class AFlag* NearbyFlag;
 	UPROPERTY()
 	class AFlag* StoredFlag;
+	UPROPERTY()
+	class AHoverVehicle* StoredVehicle;
 
 public:
 	ACaptureTheFlagCharacter();
@@ -136,5 +138,6 @@ public:
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	FORCEINLINE class AFlag* GetStoredFlag() const { return StoredFlag; }
+	FORCEINLINE class AHoverVehicle* GetStoredVehicle() const { return StoredVehicle; }
 };
 

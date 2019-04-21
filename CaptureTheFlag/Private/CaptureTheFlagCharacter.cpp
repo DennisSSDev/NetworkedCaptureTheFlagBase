@@ -16,6 +16,7 @@
 #include "CaptureTheFlagGameState.h"
 #include "CaptureTheFlagGameMode.h"
 #include "CaptureTheFlagPlayerState.h"
+#include "HoverVehicle.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -134,10 +135,7 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 			BoxCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 			if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? GetWorld()->GetGameState<ACaptureTheFlagGameState>() : nullptr)
 			{
-				if (ACaptureTheFlagPlayerState* CurrentPlayerState = GetPlayerState<ACaptureTheFlagPlayerState>())
-				{
-					GameState->OnFlagDrop.Broadcast();
-				}
+				GameState->OnFlagDrop.Broadcast();
 			}
 		}
 	}
@@ -191,6 +189,14 @@ void ACaptureTheFlagCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedCom
 			}
 		}
 	}
+	else if (AHoverVehicle* ValidHoverVehicle = Cast<AHoverVehicle>(OtherActor))
+	{
+		if (ValidHoverVehicle->VehicleState == EVehicleState::REST)
+		{
+			// set reference
+			StoredVehicle = ValidHoverVehicle;
+		}
+	}
 	// add overlap vehicle here 
 }
 
@@ -199,6 +205,10 @@ void ACaptureTheFlagCharacter::OnEndOverlap(UPrimitiveComponent* OverlappedComp,
 	if (AFlag* ValidFlag = Cast<AFlag>(OtherActor))
 	{
 		NearbyFlag = nullptr;
+	}
+	else if(AHoverVehicle* ValidHoverVehicle = Cast<AHoverVehicle>(OtherActor))
+	{
+		StoredVehicle = nullptr;
 	}
 }
 
@@ -303,7 +313,7 @@ void ACaptureTheFlagCharacter::OnFire()
 		DrawDebugLine(World, SpawnLocation, EndLocation, FColor::Blue, false, 0.2f, 0, 5.f);
 		if (World->LineTraceSingleByChannel(HitResult, SpawnLocation, EndLocation, ECollisionChannel::ECC_Pawn))
 		{
-			ACaptureTheFlagCharacter* HitTarget = Cast<ACaptureTheFlagCharacter>(HitResult.Actor);
+			APawn* HitTarget = Cast<APawn>(HitResult.Actor);
 			if (HitTarget)
 			{
 				RPC_RequestHit(HitTarget);

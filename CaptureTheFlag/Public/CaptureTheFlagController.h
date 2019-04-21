@@ -8,6 +8,9 @@
 /**
  * 
  */
+
+class ACaptureTheFlagCharacter;
+
 UCLASS()
 class CAPTURETHEFLAG_API ACaptureTheFlagController : public APlayerController
 {
@@ -22,10 +25,17 @@ class CAPTURETHEFLAG_API ACaptureTheFlagController : public APlayerController
 	void StopInteract();
 	void DropFlag();
 	void StopDropFlag();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_PossessVehicle(AHoverVehicle* Vehicle);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_UnPossesVehicle();
 protected:
 	virtual void SetupInputComponent() override;
 private:
 	bool bHoldingJump = false;
+	bool bInVehicle = false;
+	class ACaptureTheFlagCharacter* DefaultPawn;
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	FORCEINLINE class ACaptureTheFlagCharacter* GetDefaultPlayerPawn() const { return DefaultPawn; }
 };
