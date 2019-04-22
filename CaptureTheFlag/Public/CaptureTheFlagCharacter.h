@@ -96,6 +96,12 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_ReturnFlagToBase(AFlag* Target);
 
+	UFUNCTION(Server, UnReliable, WithValidation)
+	void RPC_DrawShot(FVector Start, FVector End);
+
+	UFUNCTION(NetMulticast, UnReliable)
+	void Server_DrawShot(FVector Start, FVector End);
+
 	UFUNCTION()
 	void OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	UFUNCTION()
@@ -133,11 +139,24 @@ private:
 	FTimerHandle PickUpTimer;
 	UPROPERTY()
 	FTimerHandle DropTimer;
+	float DropTime = 1.f;
+	bool bInitPickUp = false;
+	bool bInitDrop = false;
+	bool bHasFlag = false;
+	float InteractTime = 0.f;
 public:
 	/** Getters */
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 	FORCEINLINE class AFlag* GetStoredFlag() const { return StoredFlag; }
 	FORCEINLINE class AHoverVehicle* GetStoredVehicle() const { return StoredVehicle; }
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FORCEINLINE bool& IsPickUpStarted() const { return bInitPickUp; }
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FORCEINLINE bool& IsDropStarted() const { return bInitDrop; }
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FORCEINLINE float& GetInteractTime() const { return InteractTime; }
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FORCEINLINE bool& IsOwningFlag() const { return bHasFlag; }
 };
 

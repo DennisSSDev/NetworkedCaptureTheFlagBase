@@ -26,7 +26,7 @@ public:
 	// Sets default values for this actor's properties
 	AFlag();
 	// determine how can the player pick up the flag
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Replicated)
 	int32 BehaviorState = -1;
 	UPROPERTY(EditAnywhere)
 	EFlagState FlagState = EFlagState::InBase;
@@ -42,5 +42,6 @@ protected:
 
 public:	
 	// Called every frame
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void Tick(float DeltaTime) override;
 };

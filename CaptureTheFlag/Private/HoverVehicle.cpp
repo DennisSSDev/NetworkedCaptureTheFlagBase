@@ -20,6 +20,7 @@ AHoverVehicle::AHoverVehicle()
 	VehicleMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	VehicleMesh->SetCollisionObjectType(ECollisionChannel::ECC_Pawn);
 	VehicleMesh->SetSimulatePhysics(true);
+
 	RootComponent = VehicleMesh;
 	
 
@@ -48,6 +49,22 @@ AHoverVehicle::AHoverVehicle()
 
 	VehicleState = EVehicleState::REST;
 	FlagAllowance = EFlagAllowance::DENY;
+
+	VehicleMesh->OnComponentHit.AddDynamic(this, &AHoverVehicle::OnCompHit);
+
+}
+
+void AHoverVehicle::OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (UHealthComponent* HPComponent = OtherActor->FindComponentByClass<UHealthComponent>())
+	{
+		float ImpactStrength = NormalImpulse.SizeSquared();
+		if (ImpactStrength > 18000000000000.f)
+		{
+			APawn* PotentialPlayer = Cast<APawn>(OtherActor);
+			RPC_RequestRunOverTarget(PotentialPlayer);
+		}
+	}
 }
 
 // Called when the game starts or when spawned
@@ -67,6 +84,23 @@ void AHoverVehicle::Tick(float DeltaTime)
 void AHoverVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+}
+
+bool AHoverVehicle::RPC_RequestRunOverTarget_Validate(const APawn* Target)
+{
+	return true;
+}
+
+void AHoverVehicle::RPC_RequestRunOverTarget_Implementation(const APawn* Target)
+{
+	if (Target)
+	{
+		UHealthComponent* HPComponent = Target->FindComponentByClass<UHealthComponent>();
+		if (HPComponent)
+		{
+			HPComponent->RPC_DealSpecifiedDamage(9999.f); // Insta kill
+		}
+	}
 }
 
 bool AHoverVehicle::RPC_MoveForward_Validate(float Val, float Yaw)

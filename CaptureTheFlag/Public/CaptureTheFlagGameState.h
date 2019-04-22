@@ -57,6 +57,8 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void ReturnFlagToBase(AFlag* Target, uint8 Index);
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	UPROPERTY(BlueprintAssignable)
 	FFlagCapture OnFlagCapture;
 	UPROPERTY(BlueprintAssignable)
@@ -73,7 +75,7 @@ private:
 	FTimerHandle MiscTimer; // Use for misc timer stuff
 	UPROPERTY()
 	FPlayerData CurrentOwningPlayer;
-	UPROPERTY()
+	UPROPERTY(Replicated)
 	FPlayerData WonPlayer;
 	UPROPERTY()
 	TMap<FString, int32> PlayerScores;

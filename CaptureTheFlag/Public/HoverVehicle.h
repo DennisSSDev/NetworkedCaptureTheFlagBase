@@ -30,6 +30,8 @@ class CAPTURETHEFLAG_API AHoverVehicle : public APawn
 {
 	GENERATED_BODY()
 
+	UFUNCTION()
+	void OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 public:
 	// Sets default values for this pawn's properties
 	AHoverVehicle();
@@ -66,4 +68,6 @@ public:
 	void RPC_MoveForward(float Val, float Yaw);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_MoveRight(float Val, float Yaw);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_RequestRunOverTarget(const APawn* Target);
 };

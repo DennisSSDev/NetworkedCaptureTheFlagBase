@@ -25,6 +25,19 @@ void UHealthComponent::BeginPlay()
 	// ...
 }
 
+bool UHealthComponent::RPC_DealSpecifiedDamage_Validate(float Dmg)
+{
+	return true;
+}
+
+void UHealthComponent::RPC_DealSpecifiedDamage_Implementation(float Dmg)
+{
+	if ((HealthValue -= Dmg) <= 0)
+	{
+		OnDeath.Broadcast();
+	}
+}
+
 void UHealthComponent::RPC_DealDamage_Implementation()
 {
 	if((HealthValue -= 10) <= 0)

@@ -4,7 +4,7 @@
 #include "Flag.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
-
+#include "UnrealNetwork.h"
 // Sets default values
 AFlag::AFlag()
 {
@@ -26,6 +26,12 @@ void AFlag::BeginPlay()
 {
 	Super::BeginPlay();
 	
+}
+
+void AFlag::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AFlag, BehaviorState);
 }
 
 // Called every frame

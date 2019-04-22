@@ -6,6 +6,7 @@
 #include "EngineUtils.h"
 #include "Flag.h"
 #include "FlagSpawnPoint.h"
+#include "UnrealNetwork.h"
 
 ACaptureTheFlagGameState::ACaptureTheFlagGameState()
 {
@@ -72,6 +73,12 @@ void ACaptureTheFlagGameState::StopCaptureTimer()
 		CurrentOwningPlayer.Name = "None";
 		CurrentOwningPlayer.Score = -1;
 	}
+}
+
+void ACaptureTheFlagGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ACaptureTheFlagGameState, WonPlayer);
 }
 
 void ACaptureTheFlagGameState::ReturnFlagToBase_Implementation(AFlag* Target, uint8 Index)

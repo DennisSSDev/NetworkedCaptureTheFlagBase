@@ -73,8 +73,9 @@ void ACaptureTheFlagCharacter::BeginPlay()
 	//Attach gun mesh component to Skeleton, doing it here because the skeleton is not yet created in the constructor
 	FP_Gun->AttachToComponent(Mesh1P, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, true), TEXT("GripPoint"));
 	CharacterMovementComponent = FindComponentByClass<UCharacterMovementComponent>();
-	//ACaptureTheFlagGameState* GameState = GetWorld()->GetGameState<ACaptureTheFlagGameState>();
-	//GameState->OnFlagScore.AddDynamic(this, &ACaptureTheFlagCharacter::DestroyStoredFlag);
+	bInitPickUp = false;
+	bInitDrop = false;
+	InteractTime = 0.f;
 }
 
 void ACaptureTheFlagCharacter::Server_PickUpFlag_Implementation(AFlag* Target)
@@ -123,6 +124,7 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 		AFlag* AttachedFlag = Cast<AFlag>(AttachedActors[0]);
 		if (AttachedFlag)
 		{
+			//AttachedFlag->BehaviorState = FMath::RandRange(-1, 3);
 			FDetachmentTransformRules Rules(EDetachmentRule::KeepWorld, EDetachmentRule::KeepRelative, EDetachmentRule::KeepRelative, true);
 			AttachedFlag->DetachFromActor(Rules);
 			AttachedFlag->SetActorRotation(FRotator::ZeroRotator);
@@ -173,6 +175,21 @@ void ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Implementation(AFlag* Target
 	}
 }
 
+bool ACaptureTheFlagCharacter::RPC_DrawShot_Validate(FVector Start, FVector End)
+{
+	return true;
+}
+
+void ACaptureTheFlagCharacter::RPC_DrawShot_Implementation(FVector Start, FVector End)
+{
+	Server_DrawShot(Start, End);
+}
+
+void ACaptureTheFlagCharacter::Server_DrawShot_Implementation(FVector Start, FVector End)
+{
+	DrawDebugLine(GetWorld(), Start, End, FColor::Blue, false, 0.2f, 0, 5.f);
+}
+
 void ACaptureTheFlagCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	if (AFlag* ValidFlag = Cast<AFlag>(OtherActor))
@@ -217,6 +234,9 @@ void ACaptureTheFlagCharacter::AttemptPickUp()
 	// pick up now
 	if (IsLocallyControlled())
 	{
+		InteractTime = 0.f;
+		bInitPickUp = false;
+		bHasFlag = true;
 		UStaticMeshComponent* StaticMesh = NearbyFlag->FindComponentByClass<UStaticMeshComponent>();
 		StaticMesh->SetVisibility(false); // only do this locally
 	}
@@ -235,6 +255,12 @@ void ACaptureTheFlagCharacter::AttemptPickUp()
 void ACaptureTheFlagCharacter::AttemptDropFlag()
 {
 	StoredFlag = nullptr;
+	if(IsLocallyControlled())
+	{
+		InteractTime = 0.f;
+		bInitDrop = false;
+		bHasFlag = false;
+	}
 	if (HasAuthority())
 	{
 		Server_DropFlag();
@@ -258,7 +284,6 @@ void ACaptureTheFlagCharacter::Server_DealDamage_Implementation(const APawn* Tar
 */
 void ACaptureTheFlagCharacter::RPC_RequestHit_Implementation(const APawn* Target)
 {
-	UE_LOG(LogFPChar, Warning, TEXT("%s Got Hit"), *Target->GetName());
 	UHealthComponent* HPComponent = Target->FindComponentByClass<UHealthComponent>();
 	if (HPComponent)
 	{
@@ -310,7 +335,15 @@ void ACaptureTheFlagCharacter::OnFire()
 		FHitResult HitResult;
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(GetOwner());
-		DrawDebugLine(World, SpawnLocation, EndLocation, FColor::Blue, false, 0.2f, 0, 5.f);
+		if (HasAuthority())
+		{
+			Server_DrawShot(SpawnLocation, EndLocation);
+		}
+		else
+		{
+			RPC_DrawShot(SpawnLocation, EndLocation);
+		}
+		//DrawDebugLine(World, SpawnLocation, EndLocation, FColor::Blue, false, 0.2f, 0, 5.f);
 		if (World->LineTraceSingleByChannel(HitResult, SpawnLocation, EndLocation, ECollisionChannel::ECC_Pawn))
 		{
 			APawn* HitTarget = Cast<APawn>(HitResult.Actor);
@@ -411,6 +444,8 @@ void ACaptureTheFlagCharacter::Interact()
 			{
 				if (UWorld* const World = GetWorld())
 				{
+					InteractTime = BehaviorState;
+					bInitPickUp = true;
 					World->GetTimerManager().SetTimer(PickUpTimer, this, &ACaptureTheFlagCharacter::AttemptPickUp, BehaviorState, false);
 				}
 			}
@@ -424,6 +459,8 @@ void ACaptureTheFlagCharacter::Interact()
 
 void ACaptureTheFlagCharacter::StopInteract()
 {
+	InteractTime = 0.f;
+	bInitPickUp = false;
 	if (PickUpTimer.IsValid())
 	{
 		if (UWorld* const World = GetWorld())
@@ -439,7 +476,9 @@ void ACaptureTheFlagCharacter::DropFlag()
 	{
 		if (UWorld* const World = GetWorld())
 		{
-			World->GetTimerManager().SetTimer(DropTimer, this, &ACaptureTheFlagCharacter::AttemptDropFlag, 1.f, false);
+			InteractTime = DropTime;
+			bInitDrop = true;
+			World->GetTimerManager().SetTimer(DropTimer, this, &ACaptureTheFlagCharacter::AttemptDropFlag, DropTime, false);
 		}
 	}
 }
@@ -451,6 +490,8 @@ void ACaptureTheFlagCharacter::InstantDropFlag()
 
 void ACaptureTheFlagCharacter::StopDropFlag()
 {
+	InteractTime = 0.f;
+	bInitDrop = false;
 	if (DropTimer.IsValid())
 	{
 		if (UWorld* const World = GetWorld())

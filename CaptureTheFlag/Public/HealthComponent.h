@@ -35,6 +35,9 @@ public:
 	void Server_DealDamage();
 
 	UFUNCTION(Server, Reliable, WithValidation)
+	void RPC_DealSpecifiedDamage(float Dmg);
+
+	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_KillSelf();
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_KillSelf();
