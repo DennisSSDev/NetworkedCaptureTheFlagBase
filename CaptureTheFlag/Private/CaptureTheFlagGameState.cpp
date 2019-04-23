@@ -16,8 +16,8 @@ ACaptureTheFlagGameState::ACaptureTheFlagGameState()
 
 void ACaptureTheFlagGameState::Server_ScoreFlag_Implementation()
 {
+	OnFlagScore.Broadcast();
 	PlayerScores[CurrentOwningPlayer.Name] += 1;
-	
 	if (StoredFlag) // destroy current flag
 	{
 		StoredFlag->Destroy();

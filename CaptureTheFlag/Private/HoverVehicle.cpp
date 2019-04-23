@@ -22,7 +22,6 @@ AHoverVehicle::AHoverVehicle()
 	VehicleMesh->SetSimulatePhysics(true);
 
 	RootComponent = VehicleMesh;
-	
 
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>(TEXT("HoverCollision"));
 	CapsuleComponent->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
@@ -77,7 +76,6 @@ void AHoverVehicle::BeginPlay()
 void AHoverVehicle::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	//SetActorRotation(FRotator(0.f, CameraComponent->GetComponentRotation().Yaw, 0.f));
 }
 
 // Called to bind functionality to input
@@ -88,6 +86,7 @@ void AHoverVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 bool AHoverVehicle::RPC_RequestRunOverTarget_Validate(const APawn* Target)
 {
+	// Check distance between the instigator and target
 	return true;
 }
 
@@ -105,6 +104,7 @@ void AHoverVehicle::RPC_RequestRunOverTarget_Implementation(const APawn* Target)
 
 bool AHoverVehicle::RPC_MoveForward_Validate(float Val, float Yaw)
 {
+	// check if the Val and Yaw are reasonable
 	return true;
 }
 
@@ -122,6 +122,7 @@ void AHoverVehicle::RPC_MoveForward_Implementation(float Val, float Yaw)
 
 bool AHoverVehicle::RPC_MoveRight_Validate(float Val, float Yaw)
 {
+	// check if the Val and Yaw are reasonable
 	return true;
 }
 

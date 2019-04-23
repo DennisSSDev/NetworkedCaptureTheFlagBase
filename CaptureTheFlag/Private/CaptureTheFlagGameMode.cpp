@@ -44,19 +44,13 @@ void ACaptureTheFlagGameMode::TickGameRestart()
 	{
 		// Restart the game and stop the timer tick
 		GetWorld()->GetTimerManager().ClearTimer(GameResetTimer);
-		//GameSession->Restart();
 		RestartGame();
-		//GetWorld()->GetTimerManager().ClearTimer(GameResetTimer);
 	}
 }
 
 void ACaptureTheFlagGameMode::RestartGame()
 {
-	//GameSession->Restart();
-	//GetWorld()->ServerTravel()
 	GetWorld()->SeamlessTravel("FirstPersonExampleMap");
-	//GetWorld()->ServerTravel("?Restart", false);
-	//Cast<AGameMode>(this)->RestartGame();
 }
 
 void ACaptureTheFlagGameMode::SendFrontEndTimer()
@@ -68,12 +62,13 @@ void ACaptureTheFlagGameMode::SpawnFlag(FVector Location)
 {
 	if (FlagBP)
 	{
-		GetWorld()->SpawnActor<AFlag>
+		AFlag* SpawnedFlag = GetWorld()->SpawnActor<AFlag>
 		(
 			FlagBP,
 			Location,
 			FRotator::ZeroRotator
 		);
+		SpawnedFlag->BehaviorState = FMath::RandRange(-1, 3);
 	}
 }
 

@@ -110,6 +110,10 @@ private:
 	void AttemptPickUp();
 	UFUNCTION()
 	void AttemptDropFlag();
+	UFUNCTION()
+	void AttemptRetrieveFlag();
+	UFUNCTION()
+	void InvalidateFlagOwnership() { bHasFlag = false; }
 public:
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)

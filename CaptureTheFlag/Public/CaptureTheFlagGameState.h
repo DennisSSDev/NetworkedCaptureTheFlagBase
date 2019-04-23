@@ -63,6 +63,7 @@ public:
 	FFlagCapture OnFlagCapture;
 	UPROPERTY(BlueprintAssignable)
 	FFlagDelegate OnFlagDrop;
+	FFlagDelegate OnFlagScore;
 	UPROPERTY()
 	AFlag* StoredFlag;
 

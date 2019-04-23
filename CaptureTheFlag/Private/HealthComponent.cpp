@@ -27,6 +27,7 @@ void UHealthComponent::BeginPlay()
 
 bool UHealthComponent::RPC_DealSpecifiedDamage_Validate(float Dmg)
 {
+	// only a reasonable amount of damage can be done or an insta kill const value
 	return true;
 }
 
@@ -47,6 +48,7 @@ void UHealthComponent::RPC_DealDamage_Implementation()
 }
 bool UHealthComponent::RPC_DealDamage_Validate()
 {
+	//same as specified damage
 	return true;
 }
 
@@ -115,10 +117,6 @@ void UHealthComponent::Server_KillSelf_Implementation()
 			{
 				GM->RespawnPlayer(FCharacter);
 			}
-		}
-		else
-		{
-
 		}
 	}
 }

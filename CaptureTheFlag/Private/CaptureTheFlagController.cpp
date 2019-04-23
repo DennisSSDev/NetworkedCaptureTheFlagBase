@@ -8,7 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "UnrealNetwork.h"
 
-void ACaptureTheFlagController::GetLifetimeReplicatedProps(TArray< FLifetimeProperty > & OutLifetimeProps) const
+void ACaptureTheFlagController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -129,6 +129,7 @@ void ACaptureTheFlagController::StopDropFlag()
 
 bool ACaptureTheFlagController::RPC_PossessVehicle_Validate(AHoverVehicle* Vehicle)
 {
+	// Check the distance between the instigator and the Vehicle
 	return true;
 }
 
@@ -141,8 +142,6 @@ void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle*
 		PlayerCharacter->InstantDropFlag();
 	}
 	DefaultPawn->SetActorHiddenInGame(true);
-	//DefaultPawn->SetActorLocation(FVector(0.f, 0.f, 1000.f));
-	//DefaultPawn->FindComponentByClass<UCharacterMovementComponent>()->GravityScale = 0.f;
 	TArray<AActor*> AttachedActors;
 	PlayerCharacter->GetAttachedActors(AttachedActors);
 	if (AttachedActors.Num() > 0)
@@ -179,7 +178,6 @@ void ACaptureTheFlagController::RPC_UnPossesVehicle_Implementation()
 			// only the flag is ever attached
 			AttachedActors[0]->SetActorHiddenInGame(false);
 		}
-		//DefaultPawn->FindComponentByClass<UCharacterMovementComponent>()->GravityScale = 1.f;
 		HoverVehicle->VehicleState = EVehicleState::REST;
 		HoverVehicle->InnerPawn = nullptr;
 		UnPossess();
