@@ -5,6 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/BoxComponent.h"
 #include "UnrealNetwork.h"
+
 // Sets default values
 AFlag::AFlag()
 {
@@ -25,7 +26,6 @@ AFlag::AFlag()
 void AFlag::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 void AFlag::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -39,4 +39,3 @@ void AFlag::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 }
-

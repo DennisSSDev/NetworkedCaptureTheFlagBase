@@ -84,6 +84,8 @@ void ACaptureTheFlagCharacter::BeginPlay()
 
 void ACaptureTheFlagCharacter::Server_PickUpFlag_Implementation(AFlag* Target)
 {
+	if (!Target)
+		return;
 	Target->FlagState = EFlagState::Retained;
 	UBoxComponent* BoxCollision = Target->FindComponentByClass<UBoxComponent>();
 	BoxCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -113,12 +115,30 @@ void ACaptureTheFlagCharacter::RPC_RequestPickUpFlag_Implementation(AFlag* Targe
 {
 	Server_PickUpFlag(Target);
 }
-
 bool ACaptureTheFlagCharacter::RPC_RequestPickUpFlag_Validate(AFlag* Target)
 {
-	// check whether the Target is valid
+	// distance to flag 
 	// check whether Target behavior state is -1, 0, 1, 2 or 3
-	return true;
+	if (!Target)
+	{
+		return true;
+	}
+	else
+	{
+		const int32& FlagBehaviorState = Target->BehaviorState;
+		const FVector ActorLocation = GetActorLocation();
+		const FVector FlagLocation = Target->GetActorLocation();
+		const float DistanceToFlag = FVector::DistSquared(ActorLocation, FlagLocation);
+		if (FlagBehaviorState > 3 || FlagBehaviorState < -1)
+		{
+			return false;
+		}
+		else if(DistanceToFlag > 27000.f)
+		{
+			return false;
+		}
+		return true;
+	}
 }
 
 void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
@@ -131,7 +151,13 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 		AFlag* AttachedFlag = Cast<AFlag>(AttachedActors[0]);
 		if (AttachedFlag)
 		{
-			FDetachmentTransformRules Rules(EDetachmentRule::KeepWorld, EDetachmentRule::KeepRelative, EDetachmentRule::KeepRelative, true);
+			FDetachmentTransformRules Rules
+			(
+				EDetachmentRule::KeepWorld, 
+				EDetachmentRule::KeepRelative, 
+				EDetachmentRule::KeepRelative, 
+				true
+			);
 			AttachedFlag->DetachFromActor(Rules);
 			AttachedFlag->SetActorRotation(FRotator::ZeroRotator);
 			AttachedFlag->SetActorScale3D(FVector(0.2f, 0.2f, 2.5f));
@@ -141,7 +167,10 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 			AttachedFlag->BehaviorState = FMath::RandRange(0, 3);
 			UBoxComponent* BoxCollision = AttachedFlag->FindComponentByClass<UBoxComponent>();
 			BoxCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-			if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? GetWorld()->GetGameState<ACaptureTheFlagGameState>() : nullptr)
+			if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? 
+				GetWorld()->GetGameState<ACaptureTheFlagGameState>() 
+				: 
+				nullptr)
 			{
 				GameState->OnFlagDrop.Broadcast();
 			}
@@ -152,9 +181,12 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 bool ACaptureTheFlagCharacter::RPC_RequestDropFlag_Validate()
 {
 	// Check if I have a flag attached
-	return true;
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	if (AttachedActors.Num() > 0)
+		return true;
+	return false;
 }
-
 void ACaptureTheFlagCharacter::RPC_RequestDropFlag_Implementation()
 {
 	Server_DropFlag();
@@ -162,7 +194,10 @@ void ACaptureTheFlagCharacter::RPC_RequestDropFlag_Implementation()
 
 void ACaptureTheFlagCharacter::Server_StopFlagCapture_Implementation()
 {
-	if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? GetWorld()->GetGameState<ACaptureTheFlagGameState>() : nullptr)
+	if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? 
+		GetWorld()->GetGameState<ACaptureTheFlagGameState>() 
+		: 
+		nullptr)
 	{
 		GameState->OnFlagDrop.Broadcast();
 	}
@@ -172,9 +207,11 @@ bool ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Validate(AFlag* Target)
 {
 	// check if the Target is in drop state
 	// and that you're near the flag
-	return true;
+	const FVector ActorLocation = GetActorLocation();
+	const FVector FlagLocation = Target->GetActorLocation();
+	const float DistanceToFlag = FVector::DistSquared(ActorLocation, FlagLocation);
+	return (Target->FlagState != EFlagState::Dropped || DistanceToFlag > 27000.f) ? false : true;
 }
-
 void ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Implementation(AFlag* Target)
 {
 	if(ACaptureTheFlagGameState* GameState = GetWorld()->GetGameState<ACaptureTheFlagGameState>())
@@ -187,10 +224,9 @@ void ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Implementation(AFlag* Target
 
 bool ACaptureTheFlagCharacter::RPC_DrawShot_Validate(FVector Start, FVector End)
 {
-	// check that the distance between start and end is valid
+	// This is just a draw call. No essential point to validate
 	return true;
 }
-
 void ACaptureTheFlagCharacter::RPC_DrawShot_Implementation(FVector Start, FVector End)
 {
 	Server_DrawShot(Start, End);
@@ -279,13 +315,18 @@ void ACaptureTheFlagCharacter::AttemptDropFlag()
 		bInitDrop = false;
 		bHasFlag = false;
 	}
-	if (HasAuthority())
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	if (AttachedActors.Num() > 0)
 	{
-		Server_DropFlag();
-	}
-	else
-	{
-		RPC_RequestDropFlag();
+		if (HasAuthority())
+		{
+			Server_DropFlag();
+		}
+		else
+		{
+			RPC_RequestDropFlag();
+		}
 	}
 }
 
@@ -295,18 +336,7 @@ void ACaptureTheFlagCharacter::AttemptRetrieveFlag()
 	bInitPickUp = false;
 	RPC_ReturnFlagToBase(NearbyFlag);
 }
-/*
-void ACaptureTheFlagCharacter::Server_DealDamage_Implementation(const APawn* Target)
-{
-	// Implement the damaging here
-	UE_LOG(LogFPChar, Warning, TEXT("%s Got Hit"), *Target->GetName());
-	UHealthComponent* HPComponent = Target->FindComponentByClass<UHealthComponent>();
-	if (HPComponent)
-	{
-		HPComponent->RPC_DealDamage();
-	}
-}
-*/
+
 void ACaptureTheFlagCharacter::RPC_RequestHit_Implementation(const APawn* Target)
 {
 	UHealthComponent* HPComponent = Target->FindComponentByClass<UHealthComponent>();
@@ -320,7 +350,17 @@ bool ACaptureTheFlagCharacter::RPC_RequestHit_Validate(const APawn* Target)
 {
 	// check that the hit could've happened (actor rotation to the pawn)
 	// check the distance between the target and the instigator
-	return true;
+	const FVector InstigatorForward = GetActorForwardVector();
+	const FVector TargetLocation = Target->GetActorLocation();
+	const FVector InstigatorLocation = GetActorLocation();
+
+	FVector TargetDirection = TargetLocation - InstigatorLocation;
+	TargetDirection.Normalize();
+	
+	float Dot = FVector::DotProduct(InstigatorForward, TargetDirection);
+	Dot = FMath::Acos(Dot);
+	const float Distance = FVector::DistSquared(TargetLocation, InstigatorLocation);
+	return (Dot < 0.18f && Distance < 500000.f);
 }
 
 void ACaptureTheFlagCharacter::Server_JumpMontage_Implementation(const bool bStop)
@@ -341,6 +381,7 @@ void ACaptureTheFlagCharacter::Server_JumpMontage_Implementation(const bool bSto
 		AnimInstance->Montage_Play(JumpAnimation);
 	}
 }
+
 void ACaptureTheFlagCharacter::RPC_JumpMontage_Implementation(const bool bStop)
 {
 	Server_JumpMontage(bStop);
@@ -357,7 +398,10 @@ void ACaptureTheFlagCharacter::OnFire()
 	{
 		const FRotator SpawnRotation = GetControlRotation();
 		// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-		const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+		const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? 
+			FP_MuzzleLocation->GetComponentLocation() 
+			: 
+			GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
 		const FVector EndLocation = SpawnLocation + (SpawnRotation.Vector() * 500.f);
 		FHitResult HitResult;
 		FCollisionQueryParams QueryParams;
@@ -370,23 +414,12 @@ void ACaptureTheFlagCharacter::OnFire()
 		{
 			RPC_DrawShot(SpawnLocation, EndLocation);
 		}
-		//DrawDebugLine(World, SpawnLocation, EndLocation, FColor::Blue, false, 0.2f, 0, 5.f);
 		if (World->LineTraceSingleByChannel(HitResult, SpawnLocation, EndLocation, ECollisionChannel::ECC_Pawn))
 		{
 			APawn* HitTarget = Cast<APawn>(HitResult.Actor);
 			if (HitTarget)
 			{
 				RPC_RequestHit(HitTarget);
-				/*
-				if (HasAuthority())
-				{
-					Server_DealDamage(HitTarget);
-				}
-				else
-				{
-					RPC_RequestHit(HitTarget);
-				}
-				*/
 			}
 		}
 	}
@@ -396,7 +429,6 @@ void ACaptureTheFlagCharacter::OnFire()
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
 	}
-
 	// try and play a firing animation if specified
 	if (FireAnimation != NULL)
 	{
@@ -475,7 +507,14 @@ void ACaptureTheFlagCharacter::Interact()
 				{
 					InteractTime = BehaviorState;
 					bInitPickUp = true;
-					World->GetTimerManager().SetTimer(PickUpTimer, this, &ACaptureTheFlagCharacter::AttemptPickUp, BehaviorState, false);
+					World->GetTimerManager().SetTimer
+					(
+						PickUpTimer, 
+						this, 
+						&ACaptureTheFlagCharacter::AttemptPickUp, 
+						BehaviorState, 
+						false
+					);
 				}
 			}
 		}
@@ -491,7 +530,14 @@ void ACaptureTheFlagCharacter::Interact()
 				{
 					InteractTime = BehaviorState;
 					bInitPickUp = true;
-					World->GetTimerManager().SetTimer(PickUpTimer, this, &ACaptureTheFlagCharacter::AttemptRetrieveFlag, BehaviorState, false);
+					World->GetTimerManager().SetTimer
+					(
+						PickUpTimer, 
+						this, 
+						&ACaptureTheFlagCharacter::AttemptRetrieveFlag, 
+						BehaviorState, 
+						false
+					);
 				}
 			}
 		}
@@ -519,7 +565,14 @@ void ACaptureTheFlagCharacter::DropFlag()
 		{
 			InteractTime = DropTime;
 			bInitDrop = true;
-			World->GetTimerManager().SetTimer(DropTimer, this, &ACaptureTheFlagCharacter::AttemptDropFlag, DropTime, false);
+			World->GetTimerManager().SetTimer
+			(
+				DropTimer, 
+				this, 
+				&ACaptureTheFlagCharacter::AttemptDropFlag, 
+				DropTime, 
+				false
+			);
 		}
 	}
 }

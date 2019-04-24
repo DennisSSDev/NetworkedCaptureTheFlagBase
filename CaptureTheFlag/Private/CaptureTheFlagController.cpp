@@ -11,7 +11,6 @@
 void ACaptureTheFlagController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
 }
 
 void ACaptureTheFlagController::Jump()
@@ -130,11 +129,16 @@ void ACaptureTheFlagController::StopDropFlag()
 bool ACaptureTheFlagController::RPC_PossessVehicle_Validate(AHoverVehicle* Vehicle)
 {
 	// Check the distance between the instigator and the Vehicle
-	return true;
+	const FVector InstigatorLocation = GetPawn()->GetActorLocation();
+	const FVector VehicleLocation = Vehicle->GetActorLocation();
+	const float Distance = FVector::DistSquared(InstigatorLocation, VehicleLocation);
+	return (Distance < 200000.f);
 }
 
 void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle* Vehicle)
 {
+	if (Vehicle->IsPossessed())
+		return;
 	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
 	DefaultPawn = PlayerCharacter;
 	if (Vehicle->FlagAllowance == EFlagAllowance::DENY)
@@ -153,12 +157,13 @@ void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle*
 	UnPossess();
 	Vehicle->InnerPawn = DefaultPawn;
 	Vehicle->VehicleState = EVehicleState::POSSESED;
+	Vehicle->SetPossessed(true);
 	Possess(Vehicle);
-	// Server_PossesVehicle(Vehicle);
 }
 
 bool ACaptureTheFlagController::RPC_UnPossesVehicle_Validate()
 {
+	// Unpossession doesn't seem like could cause issues and disadvantages
 	return true;
 }
 
@@ -180,6 +185,7 @@ void ACaptureTheFlagController::RPC_UnPossesVehicle_Implementation()
 		}
 		HoverVehicle->VehicleState = EVehicleState::REST;
 		HoverVehicle->InnerPawn = nullptr;
+		HoverVehicle->SetPossessed(false);
 		UnPossess();
 		Possess(DefaultPawn);
 	}

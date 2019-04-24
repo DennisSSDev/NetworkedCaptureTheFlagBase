@@ -11,26 +11,21 @@
 UHealthComponent::UHealthComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
-
-	// ...
 	OnDeath.AddDynamic(this, &UHealthComponent::RPC_KillSelf);
 }
-
 
 // Called when the game starts
 void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	Owner = Cast<AActor>(GetOwner()); // change to generic actor
-	// ...
 }
 
 bool UHealthComponent::RPC_DealSpecifiedDamage_Validate(float Dmg)
 {
-	// only a reasonable amount of damage can be done or an insta kill const value
+	// The only time the health component is accessed is during shots. Those shots are validated so at this point it should be safe
 	return true;
 }
-
 void UHealthComponent::RPC_DealSpecifiedDamage_Implementation(float Dmg)
 {
 	if ((HealthValue -= Dmg) <= 0)
@@ -39,17 +34,17 @@ void UHealthComponent::RPC_DealSpecifiedDamage_Implementation(float Dmg)
 	}
 }
 
+bool UHealthComponent::RPC_DealDamage_Validate()
+{
+	//same as specified damage
+	return true;
+}
 void UHealthComponent::RPC_DealDamage_Implementation()
 {
 	if((HealthValue -= 10) <= 0)
 	{
 		OnDeath.Broadcast();
 	}
-}
-bool UHealthComponent::RPC_DealDamage_Validate()
-{
-	//same as specified damage
-	return true;
 }
 
 void UHealthComponent::Server_DealDamage_Implementation()
@@ -60,6 +55,10 @@ void UHealthComponent::Server_DealDamage_Implementation()
 	}
 }
 
+bool UHealthComponent::RPC_KillSelf_Validate()
+{
+	return (HealthValue <= 0);
+}
 void UHealthComponent::RPC_KillSelf_Implementation()
 {
 	if (Owner)
@@ -77,8 +76,6 @@ void UHealthComponent::RPC_KillSelf_Implementation()
 			// Get a reference to the pawn that entered the vehicle
 			if (ACaptureTheFlagCharacter* SubCharacter = HV->InnerPawn)
 			{
-				//ACaptureTheFlagController* Controller = Cast<ACaptureTheFlagController>(HV->GetController());
-				//SubCharacter = Controller->GetDefaultPlayerPawn();
 				FVector VehicleLocation = HV->GetActorLocation();
 				TArray<AActor*> AttachedActors;
 				SubCharacter->GetAttachedActors(AttachedActors);
@@ -99,11 +96,6 @@ void UHealthComponent::RPC_KillSelf_Implementation()
 			}
 		}
 	}
-}
-
-bool UHealthComponent::RPC_KillSelf_Validate()
-{
-	return (HealthValue <= 0);
 }
 
 void UHealthComponent::Server_KillSelf_Implementation()

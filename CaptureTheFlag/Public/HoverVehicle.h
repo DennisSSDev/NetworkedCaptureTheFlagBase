@@ -32,6 +32,7 @@ class CAPTURETHEFLAG_API AHoverVehicle : public APawn
 
 	UFUNCTION()
 	void OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
 public:
 	// Sets default values for this pawn's properties
 	AHoverVehicle();
@@ -56,10 +57,12 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
+private:
+	UPROPERTY()
+	bool bPossessed = false;
+	UPROPERTY()
+	float InstaKillValue = 9999.f;
 public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -70,4 +73,8 @@ public:
 	void RPC_MoveRight(float Val, float Yaw);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_RequestRunOverTarget(const APawn* Target);
+	UFUNCTION()
+	const FORCEINLINE bool& IsPossessed() const { return bPossessed; }
+	UFUNCTION()
+	void SetPossessed(bool bState) { bPossessed = bState; }
 };
