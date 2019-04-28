@@ -22,6 +22,7 @@ public:
 private:
 	/** Crosshair asset pointer */
 	class UTexture2D* CrosshairTex;
+
 	UPROPERTY(EditAnywhere, Category = "Capture The Flag")
 	TSubclassOf<class UUserWidget> HUDWidgetClass;
 

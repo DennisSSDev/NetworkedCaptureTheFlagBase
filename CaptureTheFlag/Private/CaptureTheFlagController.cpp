@@ -8,11 +8,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "UnrealNetwork.h"
 
-void ACaptureTheFlagController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-}
-
 void ACaptureTheFlagController::Jump()
 {
 	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
@@ -54,7 +49,6 @@ void ACaptureTheFlagController::MoveForward(float Value)
 	else if(AHoverVehicle* const VehiclePawn = Cast<AHoverVehicle>(GetPawn()))
 	{
 		UCameraComponent* CameraComponent = VehiclePawn->FindComponentByClass<UCameraComponent>();
-
 		VehiclePawn->RPC_MoveForward(Value, CameraComponent->GetComponentRotation().Yaw);
 	}
 }
@@ -69,7 +63,6 @@ void ACaptureTheFlagController::MoveRight(float Value)
 	else if (AHoverVehicle* const VehiclePawn = Cast<AHoverVehicle>(GetPawn()))
 	{
 		UCameraComponent* CameraComponent = VehiclePawn->FindComponentByClass<UCameraComponent>();
-
 		VehiclePawn->RPC_MoveRight(Value, CameraComponent->GetComponentRotation().Yaw);
 	}
 }
@@ -141,6 +134,7 @@ void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle*
 		return;
 	ACaptureTheFlagCharacter* PlayerCharacter = Cast<ACaptureTheFlagCharacter>(GetPawn());
 	DefaultPawn = PlayerCharacter;
+	// Cause the player to drop the flag if the vehicle disallows it
 	if (Vehicle->FlagAllowance == EFlagAllowance::DENY)
 	{
 		PlayerCharacter->InstantDropFlag();
@@ -150,10 +144,11 @@ void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle*
 	PlayerCharacter->GetAttachedActors(AttachedActors);
 	if (AttachedActors.Num() > 0)
 	{
-		// only the flag is ever attached
+		// only the flag is ever attached, so it's safe to check index 0
 		AttachedActors[0]->SetActorHiddenInGame(true);
 	}
 	DefaultPawn->SetActorEnableCollision(false);
+	// Transfer pawn ownership
 	UnPossess();
 	Vehicle->InnerPawn = DefaultPawn;
 	Vehicle->VehicleState = EVehicleState::POSSESED;
@@ -163,7 +158,7 @@ void ACaptureTheFlagController::RPC_PossessVehicle_Implementation(AHoverVehicle*
 
 bool ACaptureTheFlagController::RPC_UnPossesVehicle_Validate()
 {
-	// Unpossession doesn't seem like could cause issues and disadvantages
+	// Unpossession doesn't seem like could cause issues and disadvantages to other players
 	return true;
 }
 

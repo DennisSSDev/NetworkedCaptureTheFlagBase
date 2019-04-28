@@ -7,15 +7,14 @@
 #include "TimerManager.h"
 #include "CaptureTheFlagGameState.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFlagCapture, FString, PlayerName, AFlag*, Flag);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFlagDelegate);
-/**
- * 
- */
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FFlagCaptureEvent, FString, PlayerName, AFlag*, Flag);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FFlagEvent);
 
 class AFlag;
 class AFlagSpawnPoint;
 
+/* Main info about a player passed around */
 USTRUCT(BlueprintType)
 struct FPlayerData
 {
@@ -32,60 +31,92 @@ class CAPTURETHEFLAG_API ACaptureTheFlagGameState : public AGameStateBase
 {
 	GENERATED_BODY()
 
+	/* A function that increments the flag capture progress bar. Only client side for UMG */
 	UFUNCTION()
-	void AddPlayerPoints();
+	void IncrementLocalFlagCapture();
+
 	UFUNCTION()
 	void MiscTimerTick();
-	UFUNCTION(NetMulticast, Reliable)
-	void Server_ScoreFlag();
+
 public:
 	ACaptureTheFlagGameState();
-	UFUNCTION(BlueprintPure, Category="Capture the Flag Data")
-	const FPlayerData& GetOwningPlayer() const;
-	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
-	const FPlayerData& GetWonPlayer() const;
-	UFUNCTION(BlueprintPure, Category="Capture the Flag Data")
-	const float& GetProgressBar() const;
-	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
-	const float& GetTimeTillRestart() const;
+
+	/* Client side set for UMG to see who currently carries the flag */
+	UFUNCTION()
+	void SetCurrentOwningPlayer(FPlayerData Player);
+
+	/* Init the client side UMG timer to see how much progress has a player reached with flag capture */
+	UFUNCTION()
+	void BeginFrontEndCaptureTimer(const float BarValue, const float SecondsStandard);
+
+	UFUNCTION()
+	void InvalidateFrontEndCaptureTimer();
+
+	/* Entry point for starting the flag capture timer (client and server) */
 	UFUNCTION()
 	void BeginCaptureTimer(FString PlayerName, AFlag* Flag);
+
+	/* Invalidate client and server side flag capture timers */
 	UFUNCTION()
 	void StopCaptureTimer();
+
+	/* Launch the end game timer for everyone */
 	UFUNCTION(NetMulticast, Reliable)
-	void StartEndGameTimerFrontEnd();
+	void StartEndGameTimerFrontEnd(const FString& WonPlayerName);
+
+	/* Move the flag back to a base for everyone */
 	UFUNCTION(NetMulticast, Reliable)
 	void ReturnFlagToBase(AFlag* Target, uint8 Index);
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	UPROPERTY(BlueprintAssignable)
+	FFlagCaptureEvent OnFlagCapture;
 
 	UPROPERTY(BlueprintAssignable)
-	FFlagCapture OnFlagCapture;
+	FFlagEvent OnFlagDrop;
+	
 	UPROPERTY(BlueprintAssignable)
-	FFlagDelegate OnFlagDrop;
-	FFlagDelegate OnFlagScore;
-	UPROPERTY()
-	AFlag* StoredFlag;
+	FFlagEvent OnFlagScore;
+
+	UPROPERTY(Replicated)
+	FPlayerData CurrentOwningPlayer;
 
 protected:
 	virtual void BeginPlay();
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 private:
 	UPROPERTY()
-	FTimerHandle FlagCaptureTimer;
+	FTimerHandle LocalFlagCaptureTimer;
+
 	UPROPERTY()
 	FTimerHandle MiscTimer; // Use for misc timer stuff
-	UPROPERTY()
-	FPlayerData CurrentOwningPlayer;
+
 	UPROPERTY(Replicated)
 	FPlayerData WonPlayer;
-	UPROPERTY()
-	TMap<FString, int32> PlayerScores;
-	UPROPERTY()
-	float ProgressBar = 0.f;
+
+	UPROPERTY(Replicated)
+	float ProgressBar = 0.f; // UMG progress bar
+
 	UPROPERTY()
 	float ProgressMisc = -1.f;
+
 	UPROPERTY()
 	float SecondsTillFlagScore = 1.f;
+
 	UPROPERTY()
     TArray<AFlagSpawnPoint*> FlagSpawnPoints;
+
+public:
+	/* Getters for client side UMG visualization */
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FPlayerData& GetOwningPlayer() const;
+
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const FPlayerData& GetWonPlayer() const;
+
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const float& GetProgressBar() const;
+
+	UFUNCTION(BlueprintPure, Category = "Capture the Flag Data")
+	const float& GetTimeTillRestart() const;
 };

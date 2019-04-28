@@ -63,6 +63,7 @@ ACaptureTheFlagCharacter::ACaptureTheFlagCharacter()
 	// Default offset from the character location for projectiles to spawn
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
 
+	/* Bind the overlap events */
 	GetCapsuleComponent()->OnComponentBeginOverlap.AddDynamic(this, &ACaptureTheFlagCharacter::OnBeginOverlap);
 	GetCapsuleComponent()->OnComponentEndOverlap.AddDynamic(this, &ACaptureTheFlagCharacter::OnEndOverlap);
 }
@@ -82,12 +83,20 @@ void ACaptureTheFlagCharacter::BeginPlay()
 	}
 }
 
+void ACaptureTheFlagCharacter::Destroyed()
+{
+	/* In case the player leaves, probably a good idea to drop the flag */
+	InstantDropFlag();
+	Super::Destroyed();
+}
+
 void ACaptureTheFlagCharacter::Server_PickUpFlag_Implementation(AFlag* Target)
 {
 	if (!Target)
 		return;
 	Target->FlagState = EFlagState::Retained;
 	UBoxComponent* BoxCollision = Target->FindComponentByClass<UBoxComponent>();
+	// Attach the flag to the player's back
 	BoxCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Target->AttachToComponent
 	(
@@ -101,7 +110,8 @@ void ACaptureTheFlagCharacter::Server_PickUpFlag_Implementation(AFlag* Target)
 		), 
 		TEXT("FlagAttachPoint")
 	);
-	// start increment timer
+
+	// Begin Flag Capture  
 	if (ACaptureTheFlagGameState* const GameState = GetWorld() != nullptr ? GetWorld()->GetGameState<ACaptureTheFlagGameState>() : nullptr)
 	{
 		if (ACaptureTheFlagPlayerState* CurrentPlayerState = GetPlayerState<ACaptureTheFlagPlayerState>())
@@ -146,6 +156,8 @@ void ACaptureTheFlagCharacter::Server_DropFlag_Implementation()
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);
 	bHasFlag = false;
+
+	// Start detachment of flag from player 
 	if (AttachedActors.Num() > 0)
 	{
 		AFlag* AttachedFlag = Cast<AFlag>(AttachedActors[0]);
@@ -216,7 +228,7 @@ void ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Implementation(AFlag* Target
 {
 	if(ACaptureTheFlagGameState* GameState = GetWorld()->GetGameState<ACaptureTheFlagGameState>())
 	{
-		uint8 SpawnPointIndex = FMath::RandRange(0, 2); // TODO: this is hard coded for now
+		uint8 SpawnPointIndex = FMath::RandRange(0, SpawnPointCount - 1);
 		Target->BehaviorState = FMath::RandRange(-1, 3);
 		GameState->ReturnFlagToBase(Target, SpawnPointIndex);
 	}
@@ -224,7 +236,7 @@ void ACaptureTheFlagCharacter::RPC_ReturnFlagToBase_Implementation(AFlag* Target
 
 bool ACaptureTheFlagCharacter::RPC_DrawShot_Validate(FVector Start, FVector End)
 {
-	// This is just a draw call. No essential point to validate
+	// This is just a dull draw call. No essential point to validate
 	return true;
 }
 void ACaptureTheFlagCharacter::RPC_DrawShot_Implementation(FVector Start, FVector End)
@@ -241,7 +253,7 @@ void ACaptureTheFlagCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedCom
 {
 	if (AFlag* ValidFlag = Cast<AFlag>(OtherActor))
 	{
-		if (ValidFlag->FlagState == EFlagState::Dropped || ValidFlag->FlagState == EFlagState::InBase) // TODO: FIx this
+		if (ValidFlag->FlagState == EFlagState::Dropped || ValidFlag->FlagState == EFlagState::InBase)
 		{
 			NearbyFlag = ValidFlag;
 			if (ValidFlag->FlagState == EFlagState::InBase)
@@ -261,7 +273,6 @@ void ACaptureTheFlagCharacter::OnBeginOverlap(UPrimitiveComponent* OverlappedCom
 			StoredVehicle = ValidHoverVehicle;
 		}
 	}
-	// add overlap vehicle here 
 }
 
 void ACaptureTheFlagCharacter::OnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
@@ -286,13 +297,13 @@ void ACaptureTheFlagCharacter::AttemptPickUp()
 {
 	if (bHasFlag)
 		return;
-	if (IsLocallyControlled())
+	if (IsLocallyControlled()) // set for UMG related stuff
 	{
 		InteractTime = 0.f;
 		bInitPickUp = false;
 		bHasFlag = true;
 		UStaticMeshComponent* StaticMesh = NearbyFlag->FindComponentByClass<UStaticMeshComponent>();
-		StaticMesh->SetVisibility(false); // only do this locally
+		StaticMesh->SetVisibility(false);
 	}
 	if (HasAuthority())
 	{
@@ -309,7 +320,7 @@ void ACaptureTheFlagCharacter::AttemptPickUp()
 void ACaptureTheFlagCharacter::AttemptDropFlag()
 {
 	StoredFlag = nullptr;
-	if(IsLocallyControlled())
+	if(IsLocallyControlled()) // UMG stuff
 	{
 		InteractTime = 0.f;
 		bInitDrop = false;
@@ -359,8 +370,9 @@ bool ACaptureTheFlagCharacter::RPC_RequestHit_Validate(const APawn* Target)
 	
 	float Dot = FVector::DotProduct(InstigatorForward, TargetDirection);
 	Dot = FMath::Acos(Dot);
+	UE_LOG(LogTemp, Warning, TEXT("%f"), Dot);
 	const float Distance = FVector::DistSquared(TargetLocation, InstigatorLocation);
-	return (Dot < 0.18f && Distance < 500000.f);
+	return (Dot < 0.42f && Distance < 500000.f);
 }
 
 void ACaptureTheFlagCharacter::Server_JumpMontage_Implementation(const bool bStop)
@@ -406,6 +418,7 @@ void ACaptureTheFlagCharacter::OnFire()
 		FHitResult HitResult;
 		FCollisionQueryParams QueryParams;
 		QueryParams.AddIgnoredActor(GetOwner());
+		// Draw shot for everyone
 		if (HasAuthority())
 		{
 			Server_DrawShot(SpawnLocation, EndLocation);
@@ -414,6 +427,8 @@ void ACaptureTheFlagCharacter::OnFire()
 		{
 			RPC_DrawShot(SpawnLocation, EndLocation);
 		}
+		// Check shot client side first
+		// and if detected shot, check if it's valid server side
 		if (World->LineTraceSingleByChannel(HitResult, SpawnLocation, EndLocation, ECollisionChannel::ECC_Pawn))
 		{
 			APawn* HitTarget = Cast<APawn>(HitResult.Actor);
@@ -425,11 +440,12 @@ void ACaptureTheFlagCharacter::OnFire()
 	}
 
 	// try and play the sound if specified
+	// only client side
 	if (FireSound != NULL)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
 	}
-	// try and play a firing animation if specified
+	// try and play a firing animation if specified. Client side
 	if (FireAnimation != NULL)
 	{
 		// Get the animation object for the arms mesh

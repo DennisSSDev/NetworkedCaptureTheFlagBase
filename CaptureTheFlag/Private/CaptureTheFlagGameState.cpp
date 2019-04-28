@@ -14,64 +14,55 @@ ACaptureTheFlagGameState::ACaptureTheFlagGameState()
 	OnFlagDrop.AddDynamic(this, &ACaptureTheFlagGameState::StopCaptureTimer);
 }
 
-void ACaptureTheFlagGameState::Server_ScoreFlag_Implementation()
+void ACaptureTheFlagGameState::SetCurrentOwningPlayer(FPlayerData Player)
 {
-	OnFlagScore.Broadcast();
-	PlayerScores[CurrentOwningPlayer.Name] += 1;
-	if (StoredFlag) // destroy current flag
-	{
-		StoredFlag->Destroy();
-	}
+	CurrentOwningPlayer = Player;
+}
 
-	if (ACaptureTheFlagGameMode* GM = (ACaptureTheFlagGameMode*)GetWorld()->GetAuthGameMode())
-	{
-		if (PlayerScores[CurrentOwningPlayer.Name] == GM->WinFlagCount)
-		{
-			WonPlayer = CurrentOwningPlayer;
-			if (HasAuthority())
-			{
-				GM->OnGameWin.Broadcast();
-			}
-		}
-		else
-		{
-			// Spawn a new flag at a random point
-			if (HasAuthority())
-			{
-				uint16 SpawnPointIndex = FMath::RandRange(0, FlagSpawnPoints.Num() - 1);
-				GM->OnFlagSpawn.Broadcast(FlagSpawnPoints[SpawnPointIndex]->GetActorLocation());
-			}
-		}
-	}
-	ProgressBar = 0.f;
-	CurrentOwningPlayer.Name = "None";
-	GetWorld()->GetTimerManager().ClearTimer(FlagCaptureTimer);
+void ACaptureTheFlagGameState::BeginFrontEndCaptureTimer(const float BarValue, const float SecondsStandard)
+{
+	if (LocalFlagCaptureTimer.IsValid())
+		return;
+	ProgressBar = BarValue;
+	SecondsTillFlagScore = SecondsStandard;
+	GetWorld()->GetTimerManager().SetTimer(LocalFlagCaptureTimer, this, &ACaptureTheFlagGameState::IncrementLocalFlagCapture, 0.1f, true);
 }
 
 void ACaptureTheFlagGameState::BeginCaptureTimer(FString PlayerName, AFlag* Flag)
 {
-	StoredFlag = Flag;
-	SecondsTillFlagScore = GetDefaultGameMode<ACaptureTheFlagGameMode>()->SecondsTillFlagScore;
-	if (FlagCaptureTimer.IsValid())
+	if (LocalFlagCaptureTimer.IsValid())
 		return;
+	SecondsTillFlagScore = GetDefaultGameMode<ACaptureTheFlagGameMode>()->SecondsTillFlagScore;
 	CurrentOwningPlayer.Name = PlayerName;
-	if (!PlayerScores.Contains(PlayerName))
+	// Luanch the server flag capture timer and then initiate the local flag timer
+	if (ACaptureTheFlagGameMode* GM = (ACaptureTheFlagGameMode*)GetWorld()->GetAuthGameMode())
 	{
-		PlayerScores.Add(PlayerName, 0);
+		GM->BeginCaptureTimer(PlayerName, Flag);
+		CurrentOwningPlayer.Score = GM->GetPlayerScore(PlayerName);
 	}
-	CurrentOwningPlayer.Score = PlayerScores[PlayerName];
-	GetWorld()->GetTimerManager().SetTimer(FlagCaptureTimer, this, &ACaptureTheFlagGameState::AddPlayerPoints, 0.1f, true);
+	GetWorld()->GetTimerManager().SetTimer(LocalFlagCaptureTimer, this, &ACaptureTheFlagGameState::IncrementLocalFlagCapture, 0.1f, true); // front end only
 }
 
 void ACaptureTheFlagGameState::StopCaptureTimer()
 {
-	StoredFlag = nullptr;
-	if (FlagCaptureTimer.IsValid())
+	if (LocalFlagCaptureTimer.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(FlagCaptureTimer);
 		ProgressBar = 0.f;
 		CurrentOwningPlayer.Name = "None";
 		CurrentOwningPlayer.Score = -1;
+		if (ACaptureTheFlagGameMode* GM = (ACaptureTheFlagGameMode*)GetWorld()->GetAuthGameMode())
+		{
+			GM->StopCaptureTimer();
+		}
+		InvalidateFrontEndCaptureTimer();
+	}
+}
+
+void ACaptureTheFlagGameState::InvalidateFrontEndCaptureTimer()
+{
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(LocalFlagCaptureTimer);
 	}
 }
 
@@ -79,6 +70,8 @@ void ACaptureTheFlagGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ACaptureTheFlagGameState, WonPlayer);
+	DOREPLIFETIME(ACaptureTheFlagGameState, CurrentOwningPlayer);
+	DOREPLIFETIME(ACaptureTheFlagGameState, ProgressBar);
 }
 
 void ACaptureTheFlagGameState::ReturnFlagToBase_Implementation(AFlag* Target, uint8 Index)
@@ -87,8 +80,9 @@ void ACaptureTheFlagGameState::ReturnFlagToBase_Implementation(AFlag* Target, ui
 	Target->SetActorLocation(FlagSpawnPoints[Index]->GetActorLocation());
 }
 
-void ACaptureTheFlagGameState::StartEndGameTimerFrontEnd_Implementation()
+void ACaptureTheFlagGameState::StartEndGameTimerFrontEnd_Implementation(const FString& WonPlayerName)
 {
+	WonPlayer.Name = WonPlayerName;
 	ProgressMisc = 5.f;
 	GetWorld()->GetTimerManager().SetTimer(MiscTimer, this, &ACaptureTheFlagGameState::MiscTimerTick, 1.f, true);
 }
@@ -110,12 +104,16 @@ void ACaptureTheFlagGameState::BeginPlay()
 	}
 }
 
-void ACaptureTheFlagGameState::AddPlayerPoints()
+void ACaptureTheFlagGameState::IncrementLocalFlagCapture()
 {
 	ProgressBar += 10.f / SecondsTillFlagScore;
 	if (ProgressBar == 100.f)
 	{
-		Server_ScoreFlag();
+		ProgressBar = 0.f;
+		CurrentOwningPlayer.Name = "None";
+		CurrentOwningPlayer.Score = -1;
+		OnFlagScore.Broadcast();
+		InvalidateFrontEndCaptureTimer();
 	}
 }
 

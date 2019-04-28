@@ -22,20 +22,9 @@ AFlag::AFlag()
 	this->bReplicates = true;
 }
 
-// Called when the game starts or when spawned
-void AFlag::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
 void AFlag::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AFlag, BehaviorState);
-}
-
-// Called every frame
-void AFlag::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
+	DOREPLIFETIME(AFlag, FlagState);
 }

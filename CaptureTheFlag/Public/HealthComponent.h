@@ -6,29 +6,29 @@
 #include "Components/ActorComponent.h"
 #include "HealthComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHealthState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FHealthEvent);
 
+/*
+  Used to define the concept of health for a pawn
+*/
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class CAPTURETHEFLAG_API UHealthComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:	
-	// Sets default values for this component's properties
 	UHealthComponent();
 
 	UPROPERTY(EditAnywhere, Category="Stats")
 	int32 HealthValue = 100;
 
 	UPROPERTY()
-	FHealthState OnDeath;
+	FHealthEvent OnDeath;
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
 public:	
-
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_DealDamage();
 	UFUNCTION(NetMulticast, Reliable)
@@ -41,6 +41,8 @@ public:
 	void RPC_KillSelf();
 	UFUNCTION(NetMulticast, Reliable)
 	void Server_KillSelf();
+
 private:
-	AActor* Owner;
+	UPROPERTY()
+	class AActor* Owner;
 };

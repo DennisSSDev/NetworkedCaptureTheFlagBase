@@ -6,9 +6,9 @@
 #include "GameFramework/PlayerState.h"
 #include "CaptureTheFlagPlayerState.generated.h"
 
-/**
- * 
- */
+/*
+	Access all the player related data here like names, killstreaks, etc.
+*/
 UCLASS()
 class CAPTURETHEFLAG_API ACaptureTheFlagPlayerState : public APlayerState
 {

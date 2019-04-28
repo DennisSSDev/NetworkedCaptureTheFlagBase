@@ -18,7 +18,7 @@ UHealthComponent::UHealthComponent()
 void UHealthComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	Owner = Cast<AActor>(GetOwner()); // change to generic actor
+	Owner = Cast<AActor>(GetOwner());
 }
 
 bool UHealthComponent::RPC_DealSpecifiedDamage_Validate(float Dmg)
@@ -65,6 +65,7 @@ void UHealthComponent::RPC_KillSelf_Implementation()
 	{
 		if (ACaptureTheFlagCharacter* const FCharacter = Cast<ACaptureTheFlagCharacter>(Owner))
 		{
+			// make shure to drop the flag before respawning
 			FCharacter->InstantDropFlag();
 			if (ACaptureTheFlagGameMode* const GM = Cast<ACaptureTheFlagGameMode>(Owner->GetWorld()->GetAuthGameMode()))
 			{

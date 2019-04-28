@@ -17,6 +17,8 @@ enum class EVehicleState: uint8
 	REST,
 	POSSESED
 };
+
+/* Can the vehicle allow flags in with the player */
 UENUM()
 enum class EFlagAllowance: uint8
 {
@@ -24,12 +26,12 @@ enum class EFlagAllowance: uint8
 	DENY
 };
 
-
 UCLASS()
 class CAPTURETHEFLAG_API AHoverVehicle : public APawn
 {
 	GENERATED_BODY()
 
+	/* Handles hot actors. If another player is hit with enough effort, it will kill him*/
 	UFUNCTION()
 	void OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
@@ -39,40 +41,45 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Mesh, meta = (AllowPrivateAccess = "true"))
 	class UStaticMeshComponent* VehicleMesh;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
 	class UBoxComponent* TriggerBox;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character,  meta = (AllowPrivateAccess = "true"))
 	class UCapsuleComponent* CapsuleComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* CameraComponent;
+
 	UPROPERTY(VisibleAnywhere)
 	class UHealthComponent* HealthComponent;
+
+	UPROPERTY()
 	EVehicleState VehicleState;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	EFlagAllowance FlagAllowance;
 
+	UPROPERTY()
 	class ACaptureTheFlagCharacter* InnerPawn;
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 private:
 	UPROPERTY()
 	bool bPossessed = false;
+
 	UPROPERTY()
 	float InstaKillValue = 9999.f;
-public:	
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+public:	
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_MoveForward(float Val, float Yaw);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_MoveRight(float Val, float Yaw);
+
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_RequestRunOverTarget(const APawn* Target);
+
 	UFUNCTION()
 	const FORCEINLINE bool& IsPossessed() const { return bPossessed; }
 	UFUNCTION()

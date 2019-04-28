@@ -16,26 +16,56 @@ class CAPTURETHEFLAG_API ACaptureTheFlagController : public APlayerController
 {
 	GENERATED_BODY()
 
+	UFUNCTION()
 	void Jump();
+
+	UFUNCTION()
 	void StopJump();
+
+	/* Causes the player to shoot his weapon */
+	UFUNCTION()
 	void OnFire();
+
+	UFUNCTION()
 	void MoveForward(float Value);
+
+	UFUNCTION()
 	void MoveRight(float Value);
+
+	/* Causes the player to interact with interactable objects (flag + vehicle) */
+	UFUNCTION()
 	void Interact();
+
+	UFUNCTION()
 	void StopInteract();
+
+	UFUNCTION()
 	void DropFlag();
+
+	UFUNCTION()
 	void StopDropFlag();
+
+	/* Attempt a vehicle possession */
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_PossessVehicle(AHoverVehicle* Vehicle);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void RPC_UnPossesVehicle();
+
 protected:
+	/* Bind all the input here */
 	virtual void SetupInputComponent() override;
+
 private:
-	bool bHoldingJump = false;
-	bool bInVehicle = false;
+	UPROPERTY()
 	class ACaptureTheFlagCharacter* DefaultPawn;
+
+	UPROPERTY()
+	uint8 bHoldingJump : 1;
+
+	UPROPERTY()
+	uint8 bInVehicle   : 1;
+
 public:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	FORCEINLINE class ACaptureTheFlagCharacter* GetDefaultPlayerPawn() const { return DefaultPawn; }
+	FORCEINLINE UFUNCTION()
+	class ACaptureTheFlagCharacter* GetDefaultPlayerPawn() const { return DefaultPawn; }
 };

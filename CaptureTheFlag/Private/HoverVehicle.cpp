@@ -60,27 +60,15 @@ void AHoverVehicle::OnCompHit(UPrimitiveComponent* HitComp, AActor* OtherActor, 
 		float ImpactStrength = NormalImpulse.SizeSquared();
 		if (ImpactStrength > 18000000000000.f)
 		{
+			// KILL the player if you hit him hard enough
 			APawn* PotentialPlayer = Cast<APawn>(OtherActor);
 			RPC_RequestRunOverTarget(PotentialPlayer);
 		}
 	}
 }
 
-// Called when the game starts or when spawned
-void AHoverVehicle::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-// Called to bind functionality to input
-void AHoverVehicle::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
-
 bool AHoverVehicle::RPC_RequestRunOverTarget_Validate(const APawn* Target)
 {
-	//TODO: can also check the velocity
 	// Check distance between the instigator and target
 	if (!Target)
 		return true;
